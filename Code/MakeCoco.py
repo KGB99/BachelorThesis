@@ -6,7 +6,9 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 from PIL import Image
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
+import shapely
+import json
 
 bitList = []
 
@@ -39,10 +41,16 @@ def filterImageDirList(x):
 def create_mask_annotation(image_path,APPROX):
     image = image_path#ski.io.imread(image_path)
     contour_list = measure.find_contours(image, positive_orientation='low')
+    segmentations = []
+    polygons = []
     for contour in contour_list:
         for i in range(len(contour)):
             row,col = contour[i]
             contour[i] = (col-1,row-1)
+        
+        #fig, ax = plt.subplots()
+        #ax.plot(contour[:,0], contour[:,1])
+        #plt.show()
         
         poly = Polygon(contour)
         if(poly.area <= 1): continue
@@ -50,15 +58,24 @@ def create_mask_annotation(image_path,APPROX):
         if APPROX:
             poly = poly.simplify(1.0, preserve_topology=False)
         segmentation = np.array(poly.exterior.coords).ravel().tolist()
-        x, y, max_x, max_y = poly.bounds
-        bbox = (x,y,max_x-x,max_y-y)
+        #coords = np.array(poly.exterior.coords)
+        #fig, ax = plt.subplots()
+        #ax.plot(coords[:,0],coords[:,1])
+        #plt.show()
+        segmentations.append(segmentation)
+        polygons.append(poly)
+        
+        multipoly = MultiPolygon(polygons)
+        x1, y1, x2, y2 = multipoly.bounds
+        bbox = (x1, y1, x2-x1, y2-y1)
+
     return segmentation, bbox, poly.area
 
 
     
 
 if __name__ == "__main__":
-    np.set_printoptions(threshold=np.inf)
+    #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
     parser.add_argument("--path_image", help="This is the path to the folder containing the images", required=True, type=str)
@@ -77,7 +94,8 @@ if __name__ == "__main__":
         imageDirList = list(filter(filterImageDirList, sorted(os.listdir(image_path))))
     else:
         imageDirList = sorted(os.listdir(image_path))
-    annotations = []
+    coco_dataset = {} 
+    coco_dataset["annotations"] = []
     for i,img_path in enumerate(bitmaskDirList):
         current_path = bitmask_path + "/" + img_path
         temp_curr = Image.open(current_path)
@@ -89,10 +107,22 @@ if __name__ == "__main__":
         current_dict = {}
         current_dict["segmentation"], current_dict["bbox"], current_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
         current_dict["iscrowd"] = 0
-        current_dict["image_id"] = imageDirList[i].split(".png")[0]
+        current_dict["image_id"] = imageDirList[i].split(".")[0]
         current_dict["category_id"] = 1
-        current_dict["id"] = i
-        annotations.append(current_dict)
-    
-    if (len(annotations) != len(bitmaskDirList) != len(imageDirList)):
-        print("Lengths of directories and bitmasks dont match!")
+        current_dict["id"] = imageDirList[i].split(".")[0]
+        coco_dataset["annotations"].append(current_dict)
+
+    coco_dataset["info"] = {"description" : "COCO dataset for the sample dataset from cvg"}
+    coco_dataset["licenses"] = {}
+    coco_dataset["images"] = []
+    for i,image in enumerate(imageDirList):
+        curr_annotation = {}
+        curr_annotation["id"] = image.split(".")[0]
+        curr_annotation["width"] = width
+        curr_annotation["height"] = height
+        curr_annotation["file_name"] = image
+        coco_dataset["images"].append(curr_annotation)
+        
+    annotation_file = open("dataset_coco.json", "w")
+    annotation_file.write(json.dumps(coco_dataset, indent=3))
+    annotation_file.close()
