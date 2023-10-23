@@ -13,3 +13,7 @@
 	- mask\_visib has masks of only the visible parts of the instruments
 	- rgb has the normal rgb images which are needed for eval and train
 - we train with rgb and masks and then validate by testing on rgbs and measuring the IOU of the calculated masks and actual masks from the test set
+
+TODO:
+- Change makeCoco so that it just does one iteration through imageListDir and skips images for training that do not have the bitmask for the drill
+- Play around with cpu and gpu amount requests to speed up training, try 2 gpus next time and more cpu computation space.

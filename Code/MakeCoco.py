@@ -69,7 +69,7 @@ def create_mask_annotation(image_path,APPROX):
         x1, y1, x2, y2 = multipoly.bounds
         bbox = (x1, y1, x2-x1, y2-y1)
 
-    return segmentation, bbox, poly.area
+    return segmentations, bbox, poly.area
 
 
     
@@ -78,16 +78,18 @@ if __name__ == "__main__":
     #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
-    parser.add_argument("--path_image", help="This is the path to the folder containing the images", required=True, type=str)
-    parser.add_argument("--path_bitmask", help="This is the path to the folder containing the bitmasks of the images", required=True, type=str)
+    parser.add_argument("--image_parent", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
-    parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=0,type = int)
+    parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     args = parser.parse_args()
-    image_path = args.path_image 
+    parent_path = args.image_parent
     APPROX = args.approx
-    bitmask_path = args.path_bitmask
     LIMIT = args.limit
+
+    # Sometimes the drill is not in the scene, 
+    # this can be incorporated in a useful manner at some later point in time
     FILTER = True
+
     
     bitmaskDirList = list(filter(filterPowerDrill, sorted(os.listdir(bitmask_path))))
     if FILTER:
@@ -96,7 +98,8 @@ if __name__ == "__main__":
         imageDirList = sorted(os.listdir(image_path))
     coco_dataset = {} 
     coco_dataset["annotations"] = []
-    for i,img_path in enumerate(bitmaskDirList):
+
+    for i,img_path in enumerate(bitmaskDirList[:LIMIT]):
         current_path = bitmask_path + "/" + img_path
         temp_curr = Image.open(current_path)
         temp_curr.convert("1")
@@ -107,22 +110,22 @@ if __name__ == "__main__":
         current_dict = {}
         current_dict["segmentation"], current_dict["bbox"], current_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
         current_dict["iscrowd"] = 0
-        current_dict["image_id"] = imageDirList[i].split(".")[0]
+        current_dict["image_id"] = int(imageDirList[i].split(".")[0])
         current_dict["category_id"] = 1
-        current_dict["id"] = imageDirList[i].split(".")[0]
+        current_dict["id"] = int(imageDirList[i].split(".")[0])
         coco_dataset["annotations"].append(current_dict)
 
-    coco_dataset["info"] = {"description" : "COCO dataset for the sample dataset from cvg"}
+    coco_dataset["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
     coco_dataset["licenses"] = {}
     coco_dataset["images"] = []
-    for i,image in enumerate(imageDirList):
+    for i,image in enumerate(imageDirList[:LIMIT]):
         curr_annotation = {}
-        curr_annotation["id"] = image.split(".")[0]
+        curr_annotation["id"] = int(image.split(".")[0])
         curr_annotation["width"] = width
         curr_annotation["height"] = height
         curr_annotation["file_name"] = image
         coco_dataset["images"].append(curr_annotation)
-        
+    
     annotation_file = open("dataset_coco.json", "w")
     annotation_file.write(json.dumps(coco_dataset, indent=3))
     annotation_file.close()
