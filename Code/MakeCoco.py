@@ -79,16 +79,29 @@ if __name__ == "__main__":
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
     parser.add_argument("--image_parent", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
+    parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
     parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     args = parser.parse_args()
     parent_path = args.image_parent
     APPROX = args.approx
     LIMIT = args.limit
+    AMODAL = args.amodal
 
     # Sometimes the drill is not in the scene, 
     # this can be incorporated in a useful manner at some later point in time
     FILTER = True
+    cameras = {}
+    print(parent_path)
+    parentDirList = sorted(os.listdir(parent_path))
+    for camera in parentDirList:
+        cameras[camera] = {}
+        cameras[camera]['bitmasks'] = []
+        # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
+        bitmask_path = camera + ('/mask_visib' if AMODAL else '/mask')
+        print(camera)
+        
+    exit()
 
     
     bitmaskDirList = list(filter(filterPowerDrill, sorted(os.listdir(bitmask_path))))
