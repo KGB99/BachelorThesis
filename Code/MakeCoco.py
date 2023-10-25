@@ -1,29 +1,36 @@
 import argparse
 import os
 from skimage import measure
-import skimage as ski
 import numpy as np
-import cv2 as cv
-import matplotlib.pyplot as plt
 from PIL import Image
 from shapely.geometry import Polygon, MultiPolygon
-import shapely
 import json
+import math
 
-bitList = []
+
+
+#Values to split the dataset into training, validation and testing
+#all scenes are around 12500 images, split into 0.7 train, 0.15 val and 0.15 test
+#train and val get dictionaries in coco format, test images are simply listed in the last dict
+train_max_index = 8750
+val_max_index = 10625
 
 def filterPowerDrill(x):
     powerdrill_id = "000000" # we are only interested in the powerdrill bitmask for now
     check = x.split("_")[1]
     check = check.split(".")[0]
+    print('BitMask ' + str(globals()["cur_bitMask"]) + '/' + str(len_bitMaskDirList))
+    globals()["cur_bitMask"] += 1
     if check == powerdrill_id:
-        bitList.append(x.split("_")[0])
+        globals()["bitList"].append(x.split("_")[0])
         return True
     else:
         return False
     
 def filterImageDirList(x):
-    if x.split(".png")[0] in bitList:
+    print('Filtering image ' + str(globals()["cur_filterImage"]) + '/' + str(len_imageDirList))
+    globals()["cur_filterImage"] += 1   
+    if x.split(".png")[0] in globals()["bitList"]:
         return True
     else:
         return False
@@ -87,58 +94,126 @@ if __name__ == "__main__":
     APPROX = args.approx
     LIMIT = args.limit
     AMODAL = args.amodal
+    
+    #status print
+    print("Working on directory: " + parent_path)
+
+    if not os.path.isdir('Annotations'):
+        os.mkdir('Annotations')
+    
+    #needed global variable for status updates
+    cur_bitMask = 1
+    cur_filterImage = 1
+    bitList = []
+
+    #create dictionary for the annotations in COCO style
+    train_dict = {} 
+    train_dict["annotations"] = []
+    train_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    train_dict["licenses"] = {}
+    train_dict["images"] = []
+
+    val_dict = {} 
+    val_dict["annotations"] = []
+    val_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    val_dict["licenses"] = {}
+    val_dict["images"] = []
+
+    test_dict = {} 
+    test_dict["annotations"] = []
+    test_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    test_dict["licenses"] = {}
+    test_dict["images"] = []
 
     # Sometimes the drill is not in the scene, 
     # this can be incorporated in a useful manner at some later point in time
     FILTER = True
     cameras = {}
-    print(parent_path)
     parentDirList = sorted(os.listdir(parent_path))
-    for camera in parentDirList:
+    len_parentDirList = len(parentDirList)
+    id = 1
+    for cameraNr,camera in enumerate(parentDirList):
         cameras[camera] = {}
         cameras[camera]['bitmasks'] = []
+
         # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
-        bitmask_path = camera + ('/mask_visib' if AMODAL else '/mask')
-        print(camera)
+        bitmask_path = parent_path + '/' + camera + ('/mask_visib' if AMODAL else '/mask')
+        image_path = parent_path + '/' + camera + '/rgb'
+
+        #create a list of all bitmasks and filter the powerdrill images, 
+        #then make sure only those images that have corresponding masks are included in training annotation
+        print('Filtering the powerdrill in the bitmasks...')
+        print('Filtering camera ' + str(cameraNr) + '/' + str(len_parentDirList))
+        bitMaskDirList = os.listdir(bitmask_path)
+        imageDirList = os.listdir(image_path)
+        len_bitMaskDirList = len(bitMaskDirList)
+        len_imageDirList = len(imageDirList)
+        bitmaskDirList = list(filter(filterPowerDrill, bitMaskDirList))
+        bitmaskDirList = sorted(bitmaskDirList)
+        if FILTER:
+            print('Filtering the images to only the ones with corresponding bitmasks...')
+            imageDirList = list(filter(filterImageDirList, imageDirList))
+            imageDirList = sorted(imageDirList)
+        else:
+            imageDirList = sorted(os.listdir(image_path))
+        print('Filtering Done!')
+             
+
+        #check that both directories have same length
+        #len_bitMaskDirList = len(bitMaskDirList)
+        #len_imageDirList = len(imageDirList)
+        #assert(len_imageDirList == len_bitMaskDirList)
+
+        #reset global variables necessary for status printing in helper functions
+        cur_bitMask = 1
+        bitList = []   
+        cur_filterImage = 1
+
         
-    exit()
 
+        #iterate through bitmasks, calculate annotation and add to dictionary
+        print('Calculating Polygon vertices for COCO Dataset...')
+        for i,img_path in enumerate(bitmaskDirList[:LIMIT]):
+            current_path = bitmask_path + "/" + img_path
+            temp = Image.open(current_path)
+            temp.convert("1")
+            width, height = temp.size
+            #add padding to bitmask because find_contours from skimage doesnt account for edge pixels, maybe opencv could be better for this
+            bitmask_curr = Image.new("1", (width+2,height+2), 0)
+            bitmask_curr.paste(temp, (1,1))
+            mask_dict = {}
+            mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
+            mask_dict["iscrowd"] = 0
+            mask_dict["image_id"] = id
+            mask_dict["category_id"] = 1
+            mask_dict["id"] = id
+            img_dict = {}
+            img_dict['id'] = id
+            img_dict['width'] = width
+            img_dict['height'] = height
+            img_dict['file_name'] = camera + '_' + imageDirList[i]
+            if (i > val_max_index):
+                test_dict["annotations"].append(mask_dict)
+                test_dict["images"].append(img_dict)
+            elif (i > train_max_index):
+                val_dict["annotations"].append(mask_dict)
+                val_dict["images"].append(img_dict)
+            else:
+                train_dict["annotations"].append(mask_dict)
+                train_dict["images"].append(img_dict) 
+            id += 1
+    print('Polygons and annotaions done!')
     
-    bitmaskDirList = list(filter(filterPowerDrill, sorted(os.listdir(bitmask_path))))
-    if FILTER:
-        imageDirList = list(filter(filterImageDirList, sorted(os.listdir(image_path))))
-    else:
-        imageDirList = sorted(os.listdir(image_path))
-    coco_dataset = {} 
-    coco_dataset["annotations"] = []
 
-    for i,img_path in enumerate(bitmaskDirList[:LIMIT]):
-        current_path = bitmask_path + "/" + img_path
-        temp_curr = Image.open(current_path)
-        temp_curr.convert("1")
-        width, height = temp_curr.size
-        #add padding to bitmask because find_contours from skimage doesnt account for edge pixels, maybe opencv could be better for this
-        bitmask_curr = Image.new("1", (width+2,height+2), 0)
-        bitmask_curr.paste(temp_curr, (1,1))
-        current_dict = {}
-        current_dict["segmentation"], current_dict["bbox"], current_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
-        current_dict["iscrowd"] = 0
-        current_dict["image_id"] = int(imageDirList[i].split(".")[0])
-        current_dict["category_id"] = 1
-        current_dict["id"] = int(imageDirList[i].split(".")[0])
-        coco_dataset["annotations"].append(current_dict)
+    #write dictionaries to files
+    f = open("Annotations/train_all_coco.json", "w")
+    f.write(json.dumps(train_dict, indent=3))
+    f.close()
+    f = open("Annotations/val_all_coco.json", "w")
+    f.write(json.dumps(val_dict, indent=3))
+    f.close()
+    f = open("Annotations/test_all_coco.json", "w")
+    f.write(json.dumps(test_dict, indent=3))
+    f.close()
 
-    coco_dataset["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
-    coco_dataset["licenses"] = {}
-    coco_dataset["images"] = []
-    for i,image in enumerate(imageDirList[:LIMIT]):
-        curr_annotation = {}
-        curr_annotation["id"] = int(image.split(".")[0])
-        curr_annotation["width"] = width
-        curr_annotation["height"] = height
-        curr_annotation["file_name"] = image
-        coco_dataset["images"].append(curr_annotation)
-    
-    annotation_file = open("dataset_coco.json", "w")
-    annotation_file.write(json.dumps(coco_dataset, indent=3))
-    annotation_file.close()
+    print('OK')
