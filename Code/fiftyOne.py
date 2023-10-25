@@ -5,6 +5,9 @@ name = "001000-train"
 data_path = "/Users/kerim/dev/BachelorThesis/Data_subset/mvpsp/train/rgb"
 label_path = "/Users/kerim/dev/BachelorThesis/Annotations/subset_test.json"
 
+#print datasets
+#print(fo.list_datasets())
+
 #import dataset
 dataset = fo.Dataset.from_dir(
     dataset_type = fo.types.COCODetectionDataset,
