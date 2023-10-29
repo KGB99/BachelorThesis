@@ -12,14 +12,15 @@ import math
 #Values to split the dataset into training, validation and testing
 #all scenes are around 12500 images, split into 0.7 train, 0.15 val and 0.15 test
 #train and val get dictionaries in coco format, test images are simply listed in the last dict
-train_max_index = 8750
-val_max_index = 10625
+# bitmaskdirlist in 001000 has 9819 length
+train_max_index = 6873
+val_max_index = 8345
 
 def filterPowerDrill(x):
     powerdrill_id = "000000" # we are only interested in the powerdrill bitmask for now
     check = x.split("_")[1]
     check = check.split(".")[0]
-    print('BitMask ' + str(globals()["cur_bitMask"]) + '/' + str(len_bitMaskDirList))
+    print('BitMask ' + str(globals()["cur_bitMask"]) + '/' + str(len_bitmaskDirList))
     globals()["cur_bitMask"] += 1
     if check == powerdrill_id:
         globals()["bitList"].append(x.split("_")[0])
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
     id = 1
-    for cameraNr,camera in enumerate(parentDirList):
+    for cameraNr,camera in enumerate(parentDirList[:1]):
         cameras[camera] = {}
         cameras[camera]['bitmasks'] = []
 
@@ -142,13 +143,13 @@ if __name__ == "__main__":
 
         #create a list of all bitmasks and filter the powerdrill images, 
         #then make sure only those images that have corresponding masks are included in training annotation
-        print('Filtering the powerdrill in the bitmasks...')
-        print('Filtering camera ' + str(cameraNr) + '/' + str(len_parentDirList))
-        bitMaskDirList = os.listdir(bitmask_path)
+        print('Filtering the powerdrill in the bitmasks of ' + camera)
+        print('Filtering camera ' + str(cameraNr + 1) + '/' + str(len_parentDirList))
+        bitmaskDirList = os.listdir(bitmask_path)
         imageDirList = os.listdir(image_path)
-        len_bitMaskDirList = len(bitMaskDirList)
+        len_bitmaskDirList = len(bitmaskDirList)
         len_imageDirList = len(imageDirList)
-        bitmaskDirList = list(filter(filterPowerDrill, bitMaskDirList))
+        bitmaskDirList = list(filter(filterPowerDrill, bitmaskDirList))
         bitmaskDirList = sorted(bitmaskDirList)
         if FILTER:
             print('Filtering the images to only the ones with corresponding bitmasks...')
@@ -157,6 +158,9 @@ if __name__ == "__main__":
         else:
             imageDirList = sorted(os.listdir(image_path))
         print('Filtering Done!')
+        #print(len(bitmaskDirList)) # 35772
+        #print(len(imageDirList)) # 9819
+        #print(len(globals()['bitList'])) # 981
              
 
         #check that both directories have same length
@@ -203,7 +207,6 @@ if __name__ == "__main__":
                 train_dict["images"].append(img_dict) 
             id += 1
     print('Polygons and annotaions done!')
-    
 
     #write dictionaries to files
     f = open("Annotations/train_all_coco.json", "w")
