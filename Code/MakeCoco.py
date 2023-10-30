@@ -129,13 +129,10 @@ if __name__ == "__main__":
     # Sometimes the drill is not in the scene, 
     # this can be incorporated in a useful manner at some later point in time
     FILTER = True
-    cameras = {}
     parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
     id = 1
     for cameraNr,camera in enumerate(parentDirList[:1]):
-        cameras[camera] = {}
-        cameras[camera]['bitmasks'] = []
 
         # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
         bitmask_path = parent_path + '/' + camera + ('/mask_visib' if AMODAL else '/mask')
@@ -158,15 +155,6 @@ if __name__ == "__main__":
         else:
             imageDirList = sorted(os.listdir(image_path))
         print('Filtering Done!')
-        #print(len(bitmaskDirList)) # 35772
-        #print(len(imageDirList)) # 9819
-        #print(len(globals()['bitList'])) # 981
-             
-
-        #check that both directories have same length
-        #len_bitMaskDirList = len(bitMaskDirList)
-        #len_imageDirList = len(imageDirList)
-        #assert(len_imageDirList == len_bitMaskDirList)
 
         #reset global variables necessary for status printing in helper functions
         cur_bitMask = 1
