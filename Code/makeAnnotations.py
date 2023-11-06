@@ -7,6 +7,15 @@ from shapely.geometry import Polygon, MultiPolygon
 import json
 import math
 
+
+
+#Values to split the dataset into training, validation and testing
+#all scenes are around 12500 images, split into 0.7 train, 0.15 val and 0.15 test
+#train and val get dictionaries in coco format, test images are simply listed in the last dict
+# bitmaskdirlist in 001000 has 9819 length
+train_max_index = 6873
+val_max_index = 8345
+
 def filterPowerDrill(x):
     powerdrill_id = "000000" # we are only interested in the powerdrill bitmask for now
     check = x.split("_")[1]
@@ -27,6 +36,16 @@ def filterImageDirList(x):
     else:
         return False
 
+# def create_mask_annotation(image_path):
+#     image = cv.imread(image_path, cv.IMREAD_GRAYSCALE)
+#     if image is None:
+#         sys.exit("ERROR: Could not read the image.")
+#     ret, binary = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
+#     contours = []
+#     contours = cv.findContours(binary, contours, cv.CHAIN_APPROX_SIMPLE)
+#     cv.imshow("display", binary)
+#     k = cv.waitKey(0)
+
 def create_mask_annotation(image_path,APPROX):
     image = image_path#ski.io.imread(image_path)
     contour_list = measure.find_contours(image, positive_orientation='low')
@@ -36,6 +55,10 @@ def create_mask_annotation(image_path,APPROX):
         for i in range(len(contour)):
             row,col = contour[i]
             contour[i] = (col-1,row-1)
+        
+        #fig, ax = plt.subplots()
+        #ax.plot(contour[:,0], contour[:,1])
+        #plt.show()
         
         poly = Polygon(contour)
         if(poly.area <= 1): continue
@@ -84,21 +107,39 @@ if __name__ == "__main__":
     cur_filterImage = 1
     bitList = []
 
+    coco_dict = {}
+
+    #create dictionary for the annotations in COCO style
+    train_dict = {} 
+    train_dict["annotations"] = []
+    train_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    train_dict["licenses"] = {}
+    train_dict["images"] = []
+
+    val_dict = {} 
+    val_dict["annotations"] = []
+    val_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    val_dict["licenses"] = {}
+    val_dict["images"] = []
+
+    test_dict = {} 
+    test_dict["annotations"] = []
+    test_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
+    test_dict["licenses"] = {}
+    test_dict["images"] = []
+
     # Sometimes the drill is not in the scene, 
     # this can be incorporated in a useful manner at some later point in time
     FILTER = True
     parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
     id = 1
-    coco_dict = {}
-    for cameraNr,camera in enumerate(parentDirList):
+    for cameraNr,camera in enumerate(parentDirList[:1]):
 
         # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
         bitmask_path = parent_path + '/' + camera + ('/mask_visib' if AMODAL else '/mask')
         image_path = parent_path + '/' + camera + '/rgb'
-        
-        coco_dict[camera] = {}
-        
+
         #create a list of all bitmasks and filter the powerdrill images, 
         #then make sure only those images that have corresponding masks are included in training annotation
         print('Filtering the powerdrill in the bitmasks of ' + camera)
@@ -126,8 +167,7 @@ if __name__ == "__main__":
 
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
-        for i,img_path in enumerate(bitmaskDirList):
-            coco_dict[camera][imageDirList[i]] = []
+        for i,img_path in enumerate(bitmaskDirList[:LIMIT]):
             current_path = bitmask_path + "/" + img_path
             temp = Image.open(current_path)
             temp.convert("1")
@@ -146,14 +186,27 @@ if __name__ == "__main__":
             img_dict['width'] = width
             img_dict['height'] = height
             img_dict['file_name'] = camera + '_' + imageDirList[i]
-            coco_dict[camera][imageDirList[i]].append(img_dict)
-            coco_dict[camera][imageDirList[i]].append(mask_dict)
+            if (i > val_max_index):
+                test_dict["annotations"].append(mask_dict)
+                test_dict["images"].append(img_dict)
+            elif (i > train_max_index):
+                val_dict["annotations"].append(mask_dict)
+                val_dict["images"].append(img_dict)
+            else:
+                train_dict["annotations"].append(mask_dict)
+                train_dict["images"].append(img_dict) 
             id += 1
     print('Polygons and annotaions done!')
 
     #write dictionaries to files
-    f = open("Annotations/all_coco.json", "w")
-    f.write(json.dumps(coco_dict, indent=3))
+    f = open("Annotations/train_all_coco.json", "w")
+    f.write(json.dumps(train_dict, indent=3))
+    f.close()
+    f = open("Annotations/val_all_coco.json", "w")
+    f.write(json.dumps(val_dict, indent=3))
+    f.close()
+    f = open("Annotations/test_all_coco.json", "w")
+    f.write(json.dumps(test_dict, indent=3))
     f.close()
 
     print('OK')
