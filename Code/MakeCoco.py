@@ -7,7 +7,8 @@ from shapely.geometry import Polygon, MultiPolygon
 import json
 import math
 
-def filterPowerDrill(x):
+def filterImages(x):
+    gt_json = open(globals()['parent_path'] + '/')
     powerdrill_id = "000000" # we are only interested in the powerdrill bitmask for now
     check = x.split("_")[1]
     check = check.split(".")[0]
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
-    parser.add_argument("--image_parent", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
+    parser.add_argument("--path", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
     parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
     parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
@@ -78,14 +79,7 @@ if __name__ == "__main__":
 
     if not os.path.isdir('Annotations'):
         os.mkdir('Annotations')
-    
-    #needed global variable for status updates
-    cur_bitMask = 1
-    cur_filterImage = 1
-    bitList = []
 
-    # Sometimes the drill is not in the scene, 
-    # this can be incorporated in a useful manner at some later point in time
     FILTER = True
     parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
@@ -94,42 +88,44 @@ if __name__ == "__main__":
     for cameraNr,camera in enumerate(parentDirList):
 
         # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
-        bitmask_path = parent_path + '/' + camera + ('/mask_visib' if AMODAL else '/mask')
-        image_path = parent_path + '/' + camera + '/rgb'
+        bitmasks_path = parent_path + '/' + camera + ('/mask_visib' if AMODAL else '/mask')
+        images_path = parent_path + '/' + camera + '/rgb'
         
         coco_dict[camera] = {}
         
         #create a list of all bitmasks and filter the powerdrill images, 
         #then make sure only those images that have corresponding masks are included in training annotation
-        print('Filtering the powerdrill in the bitmasks of ' + camera)
-        print('Filtering camera ' + str(cameraNr + 1) + '/' + str(len_parentDirList))
-        bitmaskDirList = os.listdir(bitmask_path)
-        imageDirList = os.listdir(image_path)
-        len_bitmaskDirList = len(bitmaskDirList)
-        len_imageDirList = len(imageDirList)
-        bitmaskDirList = list(filter(filterPowerDrill, bitmaskDirList))
-        bitmaskDirList = sorted(bitmaskDirList)
-        if FILTER:
-            print('Filtering the images to only the ones with corresponding bitmasks...')
-            imageDirList = list(filter(filterImageDirList, imageDirList))
-            imageDirList = sorted(imageDirList)
-        else:
-            imageDirList = sorted(os.listdir(image_path))
-        print('Filtering Done!')
-
-        #reset global variables necessary for status printing in helper functions
-        cur_bitMask = 1
-        bitList = []   
-        cur_filterImage = 1
-
+        print('Filtering folder: ' + camera + ' | Progress: ' + str(cameraNr + 1) + '/' + str(len_parentDirList))
+        #bitmaskDirList = sorted(os.listdir(bitmask_path))
+        #imageDirList = sorted(os.listdir(image_path))
+        #len_bitmaskDirList = len(bitmaskDirList)
+        #len_imageDirList = len(imageDirList)
         
+        gt_json_file = open(parent_path + '/' + camera + '/scene_gt.json')
+        gt_dict = json.loads(gt_json_file)
+        bitMaskList = []
+        for images in gt_dict:
+            for bitmask in images:
+                # Powerdrill and Screwdriver have ids 1 and 2
+                if bitmask['obj_id'] in [1,2]:
+                    bitMaskList.append((images,bitmask)) # e.g: 001050_000001 becomes (1050,1)
+        print('Filtering for ' + camera + ' done!')   
 
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
-        for i,img_path in enumerate(bitmaskDirList):
-            coco_dict[camera][imageDirList[i]] = []
-            current_path = bitmask_path + "/" + img_path
-            temp = Image.open(current_path)
+        for i,(img, bitmask) in enumerate(bitMaskList):
+            coco_dict[camera][img] = {}
+            img_id = str(img)
+            bitmask_id = str(bitmask)
+            for i in range(0, 6-len(img_id)):
+                img_id = '0' + img_id
+            for i in range(0, 6-len(bitmask_id)):
+                bitmask_id = '0' + bitmask_id
+            complete_id = img_id + '_' + bitmask_id
+            bitmask_path = bitmasks_path + '/' + complete_id
+            print(bitmask_path)
+            exit()
+            temp = Image.open(bitmask_path)
             temp.convert("1")
             width, height = temp.size
             #add padding to bitmask because find_contours from skimage doesnt account for edge pixels, maybe opencv could be better for this
@@ -150,6 +146,7 @@ if __name__ == "__main__":
             coco_dict[camera][imageDirList[i]].append(mask_dict)
             id += 1
     print('Polygons and annotaions done!')
+    exit()
 
     #write dictionaries to files
     f = open("Annotations/all_coco.json", "w")
