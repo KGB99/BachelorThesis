@@ -64,12 +64,12 @@ if __name__ == "__main__":
     #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
-    parser.add_argument("--path", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
+    parser.add_argument("--parent_path", help="This is the path to the parent folder of all the scenes containing training data", required=True, type=str)
     parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
     parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     args = parser.parse_args()
-    parent_path = args.image_parent
+    parent_path = args.parent_path
     APPROX = args.approx
     LIMIT = args.limit
     AMODAL = args.amodal
@@ -102,19 +102,20 @@ if __name__ == "__main__":
         #len_imageDirList = len(imageDirList)
         
         gt_json_file = open(parent_path + '/' + camera + '/scene_gt.json')
-        gt_dict = json.loads(gt_json_file)
+        gt_dict = json.load(gt_json_file)
         bitMaskList = []
-        for images in gt_dict:
-            for bitmask in images:
+        for image in gt_dict:
+            for i,bitmask in enumerate(gt_dict[image]):
                 # Powerdrill and Screwdriver have ids 1 and 2
                 if bitmask['obj_id'] in [1,2]:
-                    bitMaskList.append((images,bitmask)) # e.g: 001050_000001 becomes (1050,1)
+                    bitMaskList.append((image,i)) # e.g: 001050_000001 becomes (1050,1)
         print('Filtering for ' + camera + ' done!')   
 
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
+        len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask) in enumerate(bitMaskList):
-            coco_dict[camera][img] = {}
+            print('Calculated ' + i + '/' + len_bitMaskList)
             img_id = str(img)
             bitmask_id = str(bitmask)
             for i in range(0, 6-len(img_id)):
@@ -122,10 +123,12 @@ if __name__ == "__main__":
             for i in range(0, 6-len(bitmask_id)):
                 bitmask_id = '0' + bitmask_id
             complete_id = img_id + '_' + bitmask_id
-            bitmask_path = bitmasks_path + '/' + complete_id
-            print(bitmask_path)
-            exit()
-            temp = Image.open(bitmask_path)
+            bitmask_path = bitmasks_path + '/' + complete_id + '.png'
+            coco_dict[camera][img] = {}
+            try:
+                temp = Image.open(bitmask_path)
+            except FileNotFoundError:
+                continue
             temp.convert("1")
             width, height = temp.size
             #add padding to bitmask because find_contours from skimage doesnt account for edge pixels, maybe opencv could be better for this
@@ -141,12 +144,11 @@ if __name__ == "__main__":
             img_dict['id'] = id
             img_dict['width'] = width
             img_dict['height'] = height
-            img_dict['file_name'] = camera + '_' + imageDirList[i]
-            coco_dict[camera][imageDirList[i]].append(img_dict)
-            coco_dict[camera][imageDirList[i]].append(mask_dict)
+            img_dict['file_name'] = images_path + '/' + img_id  
+            coco_dict[camera][img_id] = img_dict
+            coco_dict[camera][img_id] = mask_dict
             id += 1
     print('Polygons and annotaions done!')
-    exit()
 
     #write dictionaries to files
     f = open("Annotations/all_coco.json", "w")
