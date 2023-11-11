@@ -81,7 +81,9 @@ if __name__ == "__main__":
         os.mkdir('Annotations')
 
     FILTER = True
-    parentDirList = sorted(os.listdir(parent_path))
+    # currently the arg parent path should point to mvpsp so that access to /test is also possible
+    parent_path = parent_path + '/train' 
+    parentDirList = sorted(os.listdir(parent_path))[:1]
     len_parentDirList = len(parentDirList)
     id = 1
     coco_dict = {}
@@ -108,14 +110,14 @@ if __name__ == "__main__":
             for i,bitmask in enumerate(gt_dict[image]):
                 # Powerdrill and Screwdriver have ids 1 and 2
                 if bitmask['obj_id'] in [1,2]:
-                    bitMaskList.append((image,i)) # e.g: 001050_000001 becomes (1050,1)
+                    bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
         print('Filtering for ' + camera + ' done!')   
 
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
-        for i,(img, bitmask) in enumerate(bitMaskList):
-            print('Calculated ' + i + '/' + len_bitMaskList)
+        for i,(img, bitmask, object_id) in enumerate(bitMaskList[:100]):
+            print('Polygon calculation progress: ' + str(i) + '/' + str(len_bitMaskList))
             img_id = str(img)
             bitmask_id = str(bitmask)
             for i in range(0, 6-len(img_id)):
@@ -124,11 +126,14 @@ if __name__ == "__main__":
                 bitmask_id = '0' + bitmask_id
             complete_id = img_id + '_' + bitmask_id
             bitmask_path = bitmasks_path + '/' + complete_id + '.png'
-            coco_dict[camera][img] = {}
             try:
                 temp = Image.open(bitmask_path)
             except FileNotFoundError:
                 continue
+            #from now on we can assume that this image exists
+            coco_dict[camera][img_id] = {}
+
+            # start calculating masks and prepare the json dicts
             temp.convert("1")
             width, height = temp.size
             #add padding to bitmask because find_contours from skimage doesnt account for edge pixels, maybe opencv could be better for this
@@ -138,15 +143,15 @@ if __name__ == "__main__":
             mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
             mask_dict["iscrowd"] = 0
             mask_dict["image_id"] = id
-            mask_dict["category_id"] = 1
+            mask_dict["category_id"] = object_id
             mask_dict["id"] = id
             img_dict = {}
             img_dict['id'] = id
             img_dict['width'] = width
             img_dict['height'] = height
-            img_dict['file_name'] = images_path + '/' + img_id  
-            coco_dict[camera][img_id] = img_dict
-            coco_dict[camera][img_id] = mask_dict
+            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id  
+            coco_dict[camera][img_id]["img"] = img_dict
+            coco_dict[camera][img_id]["mask"] = mask_dict
             id += 1
     print('Polygons and annotaions done!')
 
