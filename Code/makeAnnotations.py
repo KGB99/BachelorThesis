@@ -7,9 +7,6 @@ from shapely.geometry import Polygon, MultiPolygon
 import json
 import math
 
-train_max_index = 50
-val_max_index = 70
-
 if __name__ == "__main__":
     #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
@@ -24,7 +21,7 @@ if __name__ == "__main__":
         os.mkdir('Annotations')
 
     #create dictionary for the annotations in COCO style
-    train_dict = {} 
+    train_dict = {}
     train_dict["annotations"] = []
     train_dict["info"] = {"description" : "COCO dataset annotations for the medical dataset from cvg's Jonas Hein"}
     train_dict["licenses"] = {}
@@ -42,15 +39,26 @@ if __name__ == "__main__":
     test_dict["licenses"] = {}
     test_dict["images"] = []
 
-    f = open('Annotations/all_coco.json')
+    print("Loading annotation file...")
+    f = open('Annotations/all_coco/all_coco.json')
     coco_dict = json.load(f)
     f.close()
+    print("Loading annotation info file...")
+    f = open('Annotations/all_coco/all_coco_info.json')
+    info_dict = json.load(f)
+    f.close()
 
+    train_ratio = 0.7
+    val_ratio = 0.15
+    
     #iterate through bitmasks, calculate annotation and add to dictionary
     print('Creating annotations...')
-    i = 0
     for camera in coco_dict:
-        for img_id in coco_dict[camera]:
+        #indexes for the training and val cutoffs
+        train_max_index = info_dict[camera] * (train_ratio)
+        val_max_index = info_dict[camera] * (train_ratio + val_ratio)
+
+        for i,img_id in enumerate(coco_dict[camera]):
             img_dict = coco_dict[camera][img_id]
             if (i > val_max_index):
                 test_dict["annotations"].append(img_dict['mask'])
@@ -61,18 +69,18 @@ if __name__ == "__main__":
             else:
                 train_dict["annotations"].append(img_dict['mask'])
                 train_dict["images"].append(img_dict['img']) 
-            i = i + 1
     print('Annotaions done!')
 
     #write dictionaries to files
-    f = open("Annotations/train_all_coco.json", "w")
-    f.write(json.dumps(train_dict, indent=3))
+    print("Writing annotation files...")
+    f = open("Annotations/train_" + output_name + ".json", "w")
+    f.write(json.dumps(train_dict))
     f.close()
-    f = open("Annotations/val_all_coco.json", "w")
-    f.write(json.dumps(val_dict, indent=3))
+    f = open("Annotations/val_" + output_name + ".json", "w")
+    f.write(json.dumps(val_dict))
     f.close()
-    f = open("Annotations/test_all_coco.json", "w")
-    f.write(json.dumps(test_dict, indent=3))
+    f = open("Annotations/test_" + output_name + ".json", "w")
+    f.write(json.dumps(test_dict))
     f.close()
 
     print('OK')

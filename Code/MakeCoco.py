@@ -7,26 +7,6 @@ from shapely.geometry import Polygon, MultiPolygon
 import json
 import math
 
-def filterImages(x):
-    gt_json = open(globals()['parent_path'] + '/')
-    powerdrill_id = "000000" # we are only interested in the powerdrill bitmask for now
-    check = x.split("_")[1]
-    check = check.split(".")[0]
-    print('BitMask ' + str(globals()["cur_bitMask"]) + '/' + str(len_bitmaskDirList))
-    globals()["cur_bitMask"] += 1
-    if check == powerdrill_id:
-        globals()["bitList"].append(x.split("_")[0])
-        return True
-    else:
-        return False
-    
-def filterImageDirList(x):
-    print('Filtering image ' + str(globals()["cur_filterImage"]) + '/' + str(len_imageDirList))
-    globals()["cur_filterImage"] += 1   
-    if x.split(".png")[0] in globals()["bitList"]:
-        return True
-    else:
-        return False
 
 def create_mask_annotation(image_path,APPROX):
     image = image_path#ski.io.imread(image_path)
@@ -83,7 +63,7 @@ if __name__ == "__main__":
     FILTER = True
     # currently the arg parent path should point to mvpsp so that access to /test is also possible
     parent_path = parent_path + '/train' 
-    parentDirList = sorted(os.listdir(parent_path))[:1]
+    parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
     id = 1
     coco_dict = {}
@@ -116,7 +96,7 @@ if __name__ == "__main__":
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
-        for i,(img, bitmask, object_id) in enumerate(bitMaskList[:100]):
+        for i,(img, bitmask, object_id) in enumerate(bitMaskList):
             print('Polygon calculation progress: ' + str(i) + '/' + str(len_bitMaskList))
             img_id = str(img)
             bitmask_id = str(bitmask)
@@ -128,10 +108,10 @@ if __name__ == "__main__":
             bitmask_path = bitmasks_path + '/' + complete_id + '.png'
             try:
                 temp = Image.open(bitmask_path)
-            except FileNotFoundError:
+            except:
                 continue
             #from now on we can assume that this image exists
-            coco_dict[camera][img_id] = {}
+            coco_dict[camera][id] = {}
 
             # start calculating masks and prepare the json dicts
             temp.convert("1")
@@ -149,15 +129,24 @@ if __name__ == "__main__":
             img_dict['id'] = id
             img_dict['width'] = width
             img_dict['height'] = height
-            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id  
-            coco_dict[camera][img_id]["img"] = img_dict
-            coco_dict[camera][img_id]["mask"] = mask_dict
+            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id + '.png'
+            coco_dict[camera][id]["img"] = img_dict
+            coco_dict[camera][id]["mask"] = mask_dict
             id += 1
     print('Polygons and annotaions done!')
 
     #write dictionaries to files
     f = open("Annotations/all_coco.json", "w")
-    f.write(json.dumps(coco_dict, indent=3))
+    f.write(json.dumps(coco_dict))
     f.close()
 
+
+    f = open("Annotations/all_coco_info.txt", "w")
+    info_dict = {}
+    #f.write("camera_id : nr. images in that camera_id\n")
+    for camera in coco_dict:
+        #f.write(camera + " : " + str(len(coco_dict[camera])) + '\n')
+        info_dict[camera] = len(coco_dict[camera])
+    f.write(json.dumps(info_dict))
+    f.close()
     print('OK')
