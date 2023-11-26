@@ -1,1 +1,1 @@
-python3 code/makeAnnotations.py --output_file="all_coco"
+python3 code/makeAnnotations.py --output_dir="testSet"
