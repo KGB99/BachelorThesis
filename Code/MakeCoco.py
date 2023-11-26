@@ -67,6 +67,8 @@ if __name__ == "__main__":
     len_parentDirList = len(parentDirList)
     id = 1
     coco_dict = {}
+    missed_images = []
+    missed_bitmasks = []
     for cameraNr,camera in enumerate(parentDirList):
 
         # If Amodal mask is requested then guide to mask_visib folder, otherwise to mask
@@ -104,8 +106,19 @@ if __name__ == "__main__":
                 img_id = '0' + img_id
             for i in range(0, 6-len(bitmask_id)):
                 bitmask_id = '0' + bitmask_id
+
             complete_id = img_id + '_' + bitmask_id
             bitmask_path = bitmasks_path + '/' + complete_id + '.png'
+            image_path = "/Volumes/cvg-ssd-05/mvpsp/train/" + camera + "/rgb/" + img_id + ".png"
+            if (not os.path.exists(image_path)):
+                print("Image " + img_id + ".png does not exist at " + image_path)
+                missed_images.append(image_path)
+                continue
+            if (not os.path.exists(bitmask_path)):
+                print("Bitmask at + " + bitmask_path + " does not exist")
+                missed_bitmasks.append(bitmask_path)
+                continue
+            
             try:
                 temp = Image.open(bitmask_path)
             except:
@@ -149,4 +162,11 @@ if __name__ == "__main__":
         info_dict[camera] = len(coco_dict[camera])
     f.write(json.dumps(info_dict))
     f.close()
+
+    f = open("Annotations/all_coco_missed.txt", "w")
+    f.write(str(missed_images))
+    f.write("\n")
+    f.write(str(missed_bitmasks))
+    f.close()
+
     print('OK')
