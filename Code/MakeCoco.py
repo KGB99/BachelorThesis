@@ -48,21 +48,28 @@ if __name__ == "__main__":
     parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
     parser.add_argument("--limit", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
+    parser.add_argument("--test", help="If test folder should be processed, not train folder", required=False, default=False,type = bool)
     args = parser.parse_args()
     parent_path = args.parent_path
     APPROX = args.approx
     LIMIT = args.limit
     AMODAL = args.amodal
-    
-    #status print
-    print("Working on directory: " + parent_path)
+
+    if args.test:
+        mvpsp_succ = 'test'
+    else: 
+        mvpsp_succ = 'train'
 
     if not os.path.isdir('Annotations'):
         os.mkdir('Annotations')
 
     FILTER = True
     # currently the arg parent path should point to mvpsp so that access to /test is also possible
-    parent_path = parent_path + '/train' 
+    parent_path = parent_path + '/' + mvpsp_succ 
+
+    #status print
+    print("Working on directory: " + parent_path)
+
     parentDirList = sorted(os.listdir(parent_path))
     len_parentDirList = len(parentDirList)
     id = 1
@@ -109,13 +116,13 @@ if __name__ == "__main__":
 
             complete_id = img_id + '_' + bitmask_id
             bitmask_path = bitmasks_path + '/' + complete_id + '.png'
-            image_path = "/Volumes/cvg-ssd-05/mvpsp/train/" + camera + "/rgb/" + img_id + ".png"
+            image_path = parent_path + "/" + camera + "/rgb/" + img_id + ".png"
             if (not os.path.exists(image_path)):
                 print("Image " + img_id + ".png does not exist at " + image_path)
                 missed_images.append(image_path)
                 continue
             if (not os.path.exists(bitmask_path)):
-                print("Bitmask at + " + bitmask_path + " does not exist")
+                print("Bitmask at " + bitmask_path + " does not exist")
                 missed_bitmasks.append(bitmask_path)
                 continue
             
@@ -149,12 +156,12 @@ if __name__ == "__main__":
     print('Polygons and annotaions done!')
 
     #write dictionaries to files
-    f = open("Annotations/all_coco.json", "w")
+    f = open("Annotations/" + mvpsp_succ + "_coco.json", "w")
     f.write(json.dumps(coco_dict))
     f.close()
 
 
-    f = open("Annotations/all_coco_info.txt", "w")
+    f = open("Annotations/" + mvpsp_succ + "_coco_info.json", "w")
     info_dict = {}
     #f.write("camera_id : nr. images in that camera_id\n")
     for camera in coco_dict:

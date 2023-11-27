@@ -40,20 +40,21 @@ if __name__ == "__main__":
     test_dict["images"] = []
 
     print("Loading annotation file...")
-    f = open('./Annotations/all_coco/all_coco.json')
+    f = open('./Annotations/test_coco/test_coco.json')
     coco_dict = json.load(f)
-    f.close()
+    f.close()  
     print("Loading annotation info file...")
-    f = open('./Annotations/all_coco/all_coco_info.json')
+    f = open('./Annotations/test_coco/test_coco_info.json')
     info_dict = json.load(f)
     f.close()
 
-    train_ratio = 0.9
-    val_ratio = 0.1
+    train_ratio = 0
     
     #iterate through bitmasks, calculate annotation and add to dictionary
     print('Creating annotations...')
     for camera in coco_dict:
+        if camera != '004000':
+            continue
         #indexes for the training and val cutoffs
         train_max_index = info_dict[camera] * (train_ratio)
 
@@ -71,10 +72,10 @@ if __name__ == "__main__":
         os.mkdir("./Annotations/" + output_dir)
     #write dictionaries to files
     print("Writing annotation files...")
-    f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
-    f.write(json.dumps(train_dict))
-    f.close()
-    f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
+    #f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
+    #f.write(json.dumps(train_dict))
+    #f.close()
+    f = open("./Annotations/" + output_dir + "/test_annotations.json", "w")
     f.write(json.dumps(val_dict))
     f.close()
 
