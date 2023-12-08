@@ -59,6 +59,8 @@ if __name__ == "__main__":
         train_max_index = info_dict[camera] * (train_ratio)
 
         for i,img_id in enumerate(coco_dict[camera]):
+            if i > 1000:
+                break
             img_dict = coco_dict[camera][img_id]
             if (i > train_max_index):
                 val_dict["annotations"].append(img_dict['mask'])
