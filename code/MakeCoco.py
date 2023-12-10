@@ -51,23 +51,22 @@ if __name__ == "__main__":
     parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
     parser.add_argument("--limit_images", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     parser.add_argument("--limit_folder", help="Limit nr of top-level folders to be processed", required=False, default=0, type=int)
-    parser.add_argument("--test", help="If test folder should be processed, not train folder", required=False, default=False,type = bool)
     parser.add_argument("--output_file", help="Name of output file", required=False, default="output", type=str)
     args = parser.parse_args()
-    parent_folders = ast.literal_eval(args.parent_folders)
+    parent_folders = eval(args.parent_folders)
     parent_path = args.parent_path
     output_file = args.output_file
     APPROX = args.approx
     LIMIT_IMAGES = args.limit_images
     AMODAL = args.amodal
-    LIMIT_FOLDERS = args.limit_folders
+    LIMIT_FOLDERS = args.limit_folder
 
     if not os.path.isdir('Annotations'):
         os.mkdir('Annotations')
 
     #status print
     print("Path: " + parent_path)
-    print("Directories: " + parent_folders)
+    print("Directories: " + str(parent_folders))   
     len_parent_folders = len(parent_folders)
 
     # if parent folders are empty then just go through all the folders in parent_path
@@ -76,7 +75,8 @@ if __name__ == "__main__":
 
     for folderNr, folder in enumerate(parent_folders):
         curr_folder_path = parent_path + "/" + folder
-        print("Currently Processing: " + folder + " || Folder Progress: " + str(folderNr + 1) + "/" + parent_folders)
+        print(curr_folder_path)
+        print("Currently Processing: " + folder + " || Folder Progress: " + str(folderNr + 1) + "/" + str(len_parent_folders))
         folderDirList = sorted(os.listdir(curr_folder_path))
         if LIMIT_FOLDERS > 0:
             folderDirList = folderDirList[:LIMIT_FOLDERS]
@@ -96,13 +96,13 @@ if __name__ == "__main__":
             
             #create a list of all bitmasks and filter the powerdrill images, 
             #then make sure only those images that have corresponding masks are included in training annotation
-            print('Filtering folder: ' + camera + ' | Progress: ' + str(cameraNr + 1) + '/' + str(len_folderDirList))
+            print('Filtering folder: ' + folder + '/' + camera + ' | Progress: ' + str(cameraNr + 1) + '/' + str(len_folderDirList))
             #bitmaskDirList = sorted(os.listdir(bitmask_path))
             #imageDirList = sorted(os.listdir(image_path))
             #len_bitmaskDirList = len(bitmaskDirList)
             #len_imageDirList = len(imageDirList)
             
-            gt_json_file = open(parent_path + '/' + camera + '/scene_gt.json')
+            gt_json_file = open(curr_folder_path + '/' + camera + '/scene_gt.json')
             gt_dict = json.load(gt_json_file)
             bitMaskList = []
             for image in gt_dict:
@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
                 complete_id = img_id + '_' + bitmask_id
                 bitmask_path = bitmasks_path + '/' + complete_id + '.png'
-                image_path = parent_path + "/" + camera + "/rgb/" + img_id + ".png"
+                image_path = curr_folder_path + "/" + camera + "/rgb/" + img_id + ".png"
                 if (not os.path.exists(image_path)):
                     print("Image " + img_id + ".png does not exist at " + image_path)
                     missed_images.append(image_path)
@@ -167,12 +167,16 @@ if __name__ == "__main__":
     print("Writing output files...")
 
     #write dictionaries to files
-    f = open("Annotations/" + output_file + ".json", "w")
+
+    if not os.path.isdir('Annotations/' + output_file):
+        os.mkdir('Annotations/' + output_file)
+    
+    f = open("Annotations/" + output_file + "/" + output_file + ".json", "w")
     f.write(json.dumps(coco_dict))
     f.close()
 
 
-    f = open("Annotations/" + output_file + "_info.json", "w")
+    f = open("Annotations/" + output_file + "/" + output_file + "_info.json", "w")
     info_dict = {}
     #f.write("camera_id : nr. images in that camera_id\n")
     for camera in coco_dict:
@@ -181,7 +185,7 @@ if __name__ == "__main__":
     f.write(json.dumps(info_dict))
     f.close()
 
-    f = open("Annotations/" + output_file + "_missed.txt", "w")
+    f = open("Annotations/" + output_file + "/" + output_file + "_missed.txt", "w")
     f.write(str(missed_images))
     f.write("\n")
     f.write(str(missed_bitmasks))
