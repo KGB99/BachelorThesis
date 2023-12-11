@@ -59,7 +59,7 @@ if __name__ == '__main__':
     
     # create mapping for img_id -> img_path
     img_mappings = {}
-    path_prepend = images_dir_path
+    path_prepend = images_dir_path + '/'
     for img_dict in test_annotations_dict['images']:
         img_mappings[img_dict['id']] = path_prepend + img_dict['file_name']
 
