@@ -5,8 +5,7 @@ import numpy as np
 from PIL import Image
 from shapely.geometry import Polygon, MultiPolygon
 import json
-import math
-import ast
+import time
 
 
 def create_mask_annotation(image_path,APPROX):
@@ -270,7 +269,7 @@ def createCocoFromSingleFolder():
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
-            print('Calculation Progress: ' + str(i) + '/' + str(len_bitMaskList))
+            print('Calculation Progress: ' + str(i) + '/' + str(len_bitMaskList), flush=True)
             img_id = str(img)
             bitmask_id = str(bitmask)
             for i in range(0, 6-len(img_id)):
@@ -313,7 +312,7 @@ def createCocoFromSingleFolder():
             img_dict['id'] = id
             img_dict['width'] = width
             img_dict['height'] = height
-            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id + image_file_ending
+            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id + '.' + image_file_ending
             coco_dict[camera][id]["img"] = img_dict
             coco_dict[camera][id]["mask"] = mask_dict
             id += 1
@@ -349,4 +348,8 @@ def createCocoFromSingleFolder():
     
 
 if __name__ == "__main__":
+    start = time.time()
     createCocoFromSingleFolder()    
+    end = time.time()
+    print('Time of execution: ' + str(end-start) + 's')
+    print('OK')
