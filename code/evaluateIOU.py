@@ -12,8 +12,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--preds_path", required=True, type=str)
     parser.add_argument("--labels_path", required=True, type=str)
+    parser.add_argument("--images_dir", required=True, type=str)
     parser.add_argument("--output", required=True, type=str)
     args = parser.parse_args()
+    images_dir_path = args.images_dir
     #/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/results
     bbox_preds_path = args.preds_path + '/bbox_detections.json'
     mask_preds_path = args.preds_path + '/mask_detections.json'
@@ -57,7 +59,7 @@ if __name__ == '__main__':
     
     # create mapping for img_id -> img_path
     img_mappings = {}
-    path_prepend = '/Users/kerim/Desktop/test_subset/'
+    path_prepend = images_dir_path
     for img_dict in test_annotations_dict['images']:
         img_mappings[img_dict['id']] = path_prepend + img_dict['file_name']
 
