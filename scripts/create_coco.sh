@@ -1,1 +1,1 @@
-python3 code/makeAnnotations.py --output_dir="testSetSubsetSSD"
+python3 code/makeAnnotations.py --output_dir="testSubSubsetORX_results"

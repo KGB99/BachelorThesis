@@ -1,0 +1,1 @@
+python3 code/evaluateIOU.py --preds_path=/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/results --labels_path=/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/test_annotations.json --output=testSetSubsetSSD
