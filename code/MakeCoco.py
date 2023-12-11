@@ -207,10 +207,14 @@ def createCocoFromSingleFolder():
     parser.add_argument("--limit_images", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     parser.add_argument("--limit_folder", help="Limit nr of top-level folders to be processed", required=False, default=0, type=int)
     parser.add_argument("--output_file", help="Name of output file", required=False, default="output", type=str)
+    parser.add_argument("--img_file_type", help="File type of the images e.g: jpg or png", required=True, type=str)
+    parser.add_argument("--bitmask_file_type", help="File type of bitmasks e.g: jpg or png", required=True, type=str)
     args = parser.parse_args()
     parent_folders = eval(args.folders)
     parent_path = args.parent_path
     output_file = args.output_file
+    image_file_ending = args.img_file_type
+    bitmask_file_ending = args.bitmask_file_type
     APPROX = args.approx
     LIMIT_IMAGES = args.limit_images
     AMODAL = args.amodal
@@ -275,8 +279,8 @@ def createCocoFromSingleFolder():
                 bitmask_id = '0' + bitmask_id
 
             complete_id = img_id + '_' + bitmask_id
-            bitmask_path = bitmasks_path + '/' + complete_id + '.png'
-            image_path = curr_folder_path + "/" + camera + "/rgb/" + img_id + ".jpg"
+            bitmask_path = bitmasks_path + '/' + complete_id + '.' + bitmask_file_ending
+            image_path = curr_folder_path + "/" + camera + "/rgb/" + img_id + "." + image_file_ending
             if (not os.path.exists(image_path)):
                 print("Image " + img_id + ".png does not exist at " + image_path)
                 missed_images.append(image_path)
@@ -309,7 +313,7 @@ def createCocoFromSingleFolder():
             img_dict['id'] = id
             img_dict['width'] = width
             img_dict['height'] = height
-            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id + '.png'
+            img_dict['file_name'] = (images_path.split('mvpsp/')[1]) + '/' + img_id + image_file_ending
             coco_dict[camera][id]["img"] = img_dict
             coco_dict[camera][id]["mask"] = mask_dict
             id += 1
