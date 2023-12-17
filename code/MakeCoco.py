@@ -19,7 +19,7 @@ def create_mask_annotation(image_path,APPROX):
             contour[i] = (col-1,row-1)
         
         poly = Polygon(contour)
-        if(poly.area <= 1): continue
+        if (poly.area <= 1): continue
 
         if APPROX:
             poly = poly.simplify(1.0, preserve_topology=False)
@@ -269,7 +269,7 @@ def createCocoFromSingleFolder():
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
-            print('Calculation Progress: ' + str(i) + '/' + str(len_bitMaskList), flush=True)
+            print('Calculation Progress: ' + str(i) + '/' + str(len_bitMaskList))
             img_id = str(img)
             bitmask_id = str(bitmask)
             for i in range(0, 6-len(img_id)):
@@ -280,6 +280,7 @@ def createCocoFromSingleFolder():
             complete_id = img_id + '_' + bitmask_id
             bitmask_path = bitmasks_path + '/' + complete_id + '.' + bitmask_file_ending
             image_path = curr_folder_path + "/" + camera + "/rgb/" + img_id + "." + image_file_ending
+            print('Calculating: ' + image_path, flush=True)
             if (not os.path.exists(image_path)):
                 print("Image " + img_id + ".png does not exist at " + image_path)
                 missed_images.append(image_path)
@@ -303,7 +304,11 @@ def createCocoFromSingleFolder():
             bitmask_curr = Image.new("1", (width+2,height+2), 0)
             bitmask_curr.paste(temp, (1,1))
             mask_dict = {}
-            mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
+            try:
+                mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
+            except Exception:
+                print("EXCEPTION AT IMAGE: " + image_path)
+                continue
             mask_dict["iscrowd"] = 0
             mask_dict["image_id"] = id
             mask_dict["category_id"] = object_id

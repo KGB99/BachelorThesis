@@ -1,21 +1,22 @@
 import argparse
 import os
-from skimage import measure
-import numpy as np
-from PIL import Image
-from shapely.geometry import Polygon, MultiPolygon
 import json
-import math
+
 
 if __name__ == "__main__":
     #np.set_printoptions(threshold=np.inf)
     # parse arguments from command line
     parser = argparse.ArgumentParser(description="This program transforms images and their bit masks to COCO dataset formatted segmentation annotations.")
     parser.add_argument("--output_dir", help="Name for the output dir.", required=True, type=str)
-    parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
+    parser.add_argument("--coco_file", help="the path to the coco file containing all infos", required=True, type=str)
+    parser.add_argument("--train_ratio", required=False, type=float, default=0.9)
+    #TODO:
+    parser.add_argument("--test", help="type true if creating testing annotations so it doesnt create two files", required=False, default=False, type=bool)
+    
     args = parser.parse_args()
     output_dir = args.output_dir
-    AMODAL = args.amodal
+    coco_dir = args.coco_file
+    train_ratio = args.train_ratio
 
     if not os.path.isdir('./Annotations'):
         os.mkdir('./Annotations')
@@ -40,27 +41,23 @@ if __name__ == "__main__":
     test_dict["images"] = []
 
     print("Loading annotation file...")
-    f = open('./Annotations/test_coco/test_coco.json')
+    # './Annotations/test_coco/test_coco.json'
+    f = open(coco_dir)
     coco_dict = json.load(f)
     f.close()  
     print("Loading annotation info file...")
-    f = open('./Annotations/test_coco/test_coco_info.json')
+    f = open(coco_dir[::-1].split('.')[1][::-1] + '_info.json')
     info_dict = json.load(f)
     f.close()
-
-    train_ratio = 0
     
     #iterate through bitmasks, calculate annotation and add to dictionary
     print('Creating annotations...')
     for camera in coco_dict:
-        if camera != '004000':
-            continue
         #indexes for the training and val cutoffs
         train_max_index = info_dict[camera] * (train_ratio)
+        print("Adding " + str(train_max_index) + " images to train, rest to val...")
 
         for i,img_id in enumerate(coco_dict[camera]):
-            if i > 1000:
-                break
             img_dict = coco_dict[camera][img_id]
             if (i > train_max_index):
                 val_dict["annotations"].append(img_dict['mask'])
@@ -74,10 +71,10 @@ if __name__ == "__main__":
         os.mkdir("./Annotations/" + output_dir)
     #write dictionaries to files
     print("Writing annotation files...")
-    #f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
-    #f.write(json.dumps(train_dict))
-    #f.close()
-    f = open("./Annotations/" + output_dir + "/test_annotations.json", "w")
+    f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
+    f.write(json.dumps(train_dict))
+    f.close()
+    f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
     f.write(json.dumps(val_dict))
     f.close()
 

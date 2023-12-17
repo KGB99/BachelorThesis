@@ -14,11 +14,13 @@ if __name__ == '__main__':
     parser.add_argument("--labels_path", required=True, type=str)
     parser.add_argument("--images_dir", required=True, type=str)
     parser.add_argument("--output", required=True, type=str)
+    parser.add_argument("--video", required=False, type=bool, default=False)
     args = parser.parse_args()
     images_dir_path = args.images_dir
     #/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/results
     bbox_preds_path = args.preds_path + '/bbox_detections.json'
     mask_preds_path = args.preds_path + '/mask_detections.json'
+    VIDEO = args.video
     #'/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/test_annotations.json'
     test_annotations_path = args.labels_path
     #'/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/predicted_video.mp4'
@@ -26,6 +28,10 @@ if __name__ == '__main__':
     if not os.path.isdir(output):
         os.mkdir(output)
     video_path = output + '/predicted_video.mp4'
+    if not VIDEO:
+        if not os.path.isdir(output + '/evaluatedImages'):
+            os.mkdir(output + '/evaluatedImages')
+    output_images_path = output + '/evaluatedImages'
 
     # read test ground truth annotations
     f = open(test_annotations_path, 'r')
@@ -73,8 +79,9 @@ if __name__ == '__main__':
 
     # prepare video sequence
     height, width, channels = (1080, 1280, 3)
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-    out = cv2.VideoWriter(video_path, fourcc, 20.0, (width, height))
+    if VIDEO:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+        out = cv2.VideoWriter(video_path, fourcc, 20.0, (width, height))
 
     for i,gt_dict in enumerate(test_annotations_dict['annotations']):
         # load image
@@ -153,8 +160,11 @@ if __name__ == '__main__':
         cv2.rectangle(bbox_image, (gt_x, gt_y), (gt_x + gt_w, gt_y + gt_h), (0,255,0),2)
         result = cv2.addWeighted(result, 1, bbox_image, 0.5, 0)
 
-        # write result to video
-        out.write(result)
+        # write result to video or image file
+        if VIDEO:
+            out.write(result)
+        else:
+            cv2.imwrite(output_images_path + '/' + str(gt_dict['image_id']) + '.jpg', result)
 
         # calculate bbox iou
         bbox_union_area = gt_area + pr_area - bbox_intersection_area
@@ -174,8 +184,8 @@ if __name__ == '__main__':
     iou_bbox = round(iou_bbox_total/bboxes_found, 2)
     ratio_seg_found = round(seg_found/total_dets, 2)
     iou_segs = round(iou_seg_total/seg_found, 2)
-
-    out.release()
+    if VIDEO:
+        out.release()
     cv2.destroyAllWindows()
     print('Percentage of bounding boxes detected: ' + str(ratio_bboxes_found))
     print('Average Intersection over union for bounding boxes: ' + str(iou_bbox))
