@@ -341,6 +341,7 @@ def createCocoFromSingleFolder():
         #f.write(camera + " : " + str(len(coco_dict[camera])) + '\n')
         info_dict[camera] = len(coco_dict[camera])
     f.write(json.dumps(info_dict))
+    f.write("\n")
     f.close()
 
     f = open("Annotations/" + output_file + "/" + output_file + "_missed.txt", "w")
