@@ -1,0 +1,1 @@
+python3 code/makeYolo.py --train_dir=/Users/kerim/dev/BachelorThesis/Data_subset --labels_dir=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset --coco_file=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset/trialSubset.json
