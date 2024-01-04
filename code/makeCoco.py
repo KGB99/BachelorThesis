@@ -44,14 +44,16 @@ def createCocoFromMultipleFolders():
     parser.add_argument("--parent_path", help="General parent path in which all chosen folders are in", required=True, type=str)
     parser.add_argument("--parent_folders", help="List of folders of chosen scenes containing data", required=True, type=str)
     parser.add_argument("--amodal", help="Write true if you want to calculate the amodal masks, default is modal", required=False, type=bool, default=False)
-    parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=int)
+    parser.add_argument("--approx", help="type in True if you wish for the bitmasks to be approximated for a smoother image", required=False, default=False,type=bool)
     parser.add_argument("--limit_images", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     parser.add_argument("--limit_folder", help="Limit nr of top-level folders to be processed", required=False, default=0, type=int)
     parser.add_argument("--output_file", help="Name of output file", required=False, default="output", type=str)
+    parser.add_argument("--write_missed", help="option to write the missed images to a file", required=False, default=False, type=bool)
     args = parser.parse_args()
     parent_folders = eval(args.parent_folders)
     parent_path = args.parent_path
     output_file = args.output_file
+    write_missed = args.write_missed
     APPROX = args.approx
     LIMIT_IMAGES = args.limit_images
     AMODAL = args.amodal
@@ -206,12 +208,16 @@ def createCocoFromSingleFolder():
     parser.add_argument("--limit_images", help="If you wish to not process all images in the path you can select a limit", required=False, default=None,type = int)
     parser.add_argument("--limit_folder", help="Limit nr of top-level folders to be processed", required=False, default=0, type=int)
     parser.add_argument("--output_file", help="Name of output file", required=False, default="output", type=str)
+    parser.add_argument("--output_dir", help="Name of output dir", required=False, default="output", type=str)
     parser.add_argument("--img_file_type", help="File type of the images e.g: jpg or png", required=True, type=str)
     parser.add_argument("--bitmask_file_type", help="File type of bitmasks e.g: jpg or png", required=True, type=str)
+    parser.add_argument("--write_missed", help="option to write the missed images to a file", required=False, default=False, type=bool)
     args = parser.parse_args()
     parent_folders = eval(args.folders)
     parent_path = args.parent_path
     output_file = args.output_file
+    output_dir = args.output_dir
+    write_missed = args.write_missed
     image_file_ending = args.img_file_type
     bitmask_file_ending = args.bitmask_file_type
     APPROX = args.approx
@@ -326,15 +332,15 @@ def createCocoFromSingleFolder():
 
     #write dictionaries to files
 
-    if not os.path.isdir('Annotations/' + output_file):
-        os.mkdir('Annotations/' + output_file)
+    if not os.path.isdir('Annotations/' + output_dir):
+        os.mkdir('Annotations/' + output_dir)
     
-    f = open("Annotations/" + output_file + "/" + output_file + ".json", "w")
+    f = open("Annotations/" + output_dir + "/" + output_file + ".json", "w")
     f.write(json.dumps(coco_dict))
     f.close()
 
 
-    f = open("Annotations/" + output_file + "/" + output_file + "_info.json", "w")
+    f = open("Annotations/" + output_dir + "/" + output_file + "_info.json", "w")
     info_dict = {}
     #f.write("camera_id : nr. images in that camera_id\n")
     for camera in coco_dict:
@@ -344,11 +350,12 @@ def createCocoFromSingleFolder():
     f.write("\n")
     f.close()
 
-    f = open("Annotations/" + output_file + "/" + output_file + "_missed.txt", "w")
-    f.write(str(missed_images))
-    f.write("\n")
-    f.write(str(missed_bitmasks))
-    f.close()
+    if write_missed:
+        f = open("Annotations/" + output_dir + "/" + output_file + "_missed.txt", "w")
+        f.write(str(missed_images))
+        f.write("\n")
+        f.write(str(missed_bitmasks))
+        f.close()
 
     print('OK')
     
