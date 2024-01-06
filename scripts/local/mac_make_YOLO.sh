@@ -1,1 +1,1 @@
-python3 code/makeYolo.py --train_dir=/Users/kerim/dev/BachelorThesis/Data_subset --labels_dir=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset --coco_file=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset/trialSubset.json
+python3 code/makeYolo.py --train_dir=/Users/kerim/dev/BachelorThesis/Data_subset/mvpsp --labels_dir=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset/mvpsp --coco_file=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset/trialSubset.json --img_type=png --info_path=/Users/kerim/dev/BachelorThesis/Annotations/trialSubset
