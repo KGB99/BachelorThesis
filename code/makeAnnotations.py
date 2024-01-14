@@ -17,6 +17,7 @@ if __name__ == "__main__":
     output_dir = args.output_dir
     coco_dir = args.coco_file
     train_ratio = args.train_ratio
+    TEST = args.test
 
     if not os.path.isdir('./Annotations'):
         os.mkdir('./Annotations')
@@ -52,12 +53,14 @@ if __name__ == "__main__":
     
     #iterate through bitmasks, calculate annotation and add to dictionary
     print('Creating annotations...')
-    for camera in coco_dict:
+    for i,camera in enumerate(coco_dict):
         #indexes for the training and val cutoffs
         train_max_index = info_dict[camera] * (train_ratio)
         print("Adding " + str(train_max_index) + " images to train, rest to val...")
-
-        for i,img_id in enumerate(coco_dict[camera]):
+        len_coco = len(coco_dict)
+        for j,img_id in enumerate(coco_dict[camera]):
+            len_cam = len(coco_dict[camera])
+            print("Camera: " + str(i+1) + "/" + str(len_coco) + " | Image: " + str(j+1) + "/" + str(len_cam), flush=True)
             img_dict = coco_dict[camera][img_id]
             if (i > train_max_index):
                 val_dict["annotations"].append(img_dict['mask'])
@@ -71,11 +74,14 @@ if __name__ == "__main__":
         os.mkdir("./Annotations/" + output_dir)
     #write dictionaries to files
     print("Writing annotation files...")
-    f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
-    f.write(json.dumps(train_dict))
-    f.close()
-    f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
-    f.write(json.dumps(val_dict))
-    f.close()
+    if TEST:
+        f = open("./Annotations/" + output_dir + "/test_annotations.json", "w")
+    else:
+        f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
+        f.write(json.dumps(train_dict))
+        f.close()
+        f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
+        f.write(json.dumps(val_dict))
+        f.close()
 
     print('OK')
