@@ -10,7 +10,4 @@
 	- spine3? = 6
 
 #TODO:
-- [ ] Make Annotations
-- [ ] Make yolact read images like in mvpsp
-- [ ] Check/Change loss function in YOLACT to not have loss for wrong predictions, only for missing correct pixels
-- [ ] Plot train AND validation loss
+- Fix labeling of progress in makeAnnotations and maybe also makeCoco? need to do +1
