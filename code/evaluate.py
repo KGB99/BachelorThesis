@@ -27,11 +27,12 @@ if __name__ == '__main__':
     output = './Annotations/' + args.output
     if not os.path.isdir(output):
         os.mkdir(output)
-    video_path = output + '/predicted_video.mp4'
-    if not VIDEO:
+    if VIDEO:
+        video_path = output + '/predicted_video.mp4'
+    else:
         if not os.path.isdir(output + '/evaluatedImages'):
             os.mkdir(output + '/evaluatedImages')
-    output_images_path = output + '/evaluatedImages'
+        output_images_path = output + '/evaluatedImages'
 
     # read test ground truth annotations
     f = open(test_annotations_path, 'r')
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     iou_bbox_total = 0
     seg_found = 0
     iou_seg_total = 0
-    total_dets = len(test_annotations_dict['annotations'])
+
 
     # prepare video sequence
     height, width, channels = (1080, 1280, 3)
@@ -83,10 +84,11 @@ if __name__ == '__main__':
         fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
         out = cv2.VideoWriter(video_path, fourcc, 20.0, (width, height))
 
+    total_dets = 0
     for i,gt_dict in enumerate(test_annotations_dict['annotations']):
+        total_dets += 1
         # load image
         print("Processing Image: " + img_mappings[gt_dict['image_id']])
-        img_path = img_mappings[gt_dict['image_id']]
     
         gt_boxes = gt_dict['bbox']
         gt_seg_vertices = gt_dict['segmentation']
@@ -96,6 +98,7 @@ if __name__ == '__main__':
         # load image
         img_path = img_mappings[gt_dict['image_id']]
         image = cv2.imread(img_path)
+        h,w,_ = image.shape
         
 
         # load predicted labels
@@ -108,31 +111,37 @@ if __name__ == '__main__':
         
         # decode masks
         pred_mask = maskUtils.decode(pred_seg)
-        gt_mask = np.zeros_like(image[:, :, 0], dtype=np.uint8)
-        gt_mask_np = [np.array(seg).reshape(-1, 1, 2).astype(np.int32) for seg in gt_seg_vertices]
-        cv2.fillPoly(gt_mask, gt_mask_np, 255)
-
-        # create filled in shape of segmentation for visualization
-        pred_mask = pred_mask * 255
-        pred_mask_color = cv2.merge([np.zeros_like(pred_mask), np.zeros_like(pred_mask), pred_mask])
+        #pred_mask = pred_mask * 255
+        pred_mask_bgr = (cv2.cvtColor(pred_mask.astype(np.uint8), cv2.COLOR_GRAY2BGR)) * np.array([0,0,255], dtype=np.uint8)
+        #result = cv2.addWeighted(image, 1, pred_mask_bgr, 0.5, 0)
+        #cv2.imwrite(output_images_path + '/' + str(gt_dict['image_id']) + '.jpg', result)
+        #exit()
+        gt_mask = np.zeros((h, w), dtype=np.uint8)
+        # Draw each polygon on the mask
+        for polygon in gt_seg_vertices:
+            rle = maskUtils.frPyObjects([polygon], h, w)
+            m = maskUtils.decode(rle)
+            gt_mask = np.maximum(gt_mask, m[:,:,0])
+        gt_mask_bool = gt_mask.astype(bool)
+        gt_mask_bgr = (cv2.cvtColor(gt_mask.astype(np.uint8), cv2.COLOR_GRAY2BGR)) * np.array([0,255,0], dtype=np.uint8)
         #gt_mask = gt_mask * 255
         #gt_mask_color = cv2.merge([np.zeros_like(gt_mask), gt_mask, np.zeros_like(gt_mask)])
 
         # Create a binary mask for the outline (1-pixel dilation)
-        kernel = np.ones((3,3), np.uint8)
-        pred_mask_outline = cv2.dilate((pred_mask), kernel, iterations=2)
-        pred_mask_outline = pred_mask_outline - pred_mask
-        pred_mask_outline_color = cv2.merge([np.zeros_like(pred_mask), np.zeros_like(pred_mask), pred_mask_outline])
-        gt_mask_outline = cv2.dilate((gt_mask), kernel, iterations=2)
-        gt_mask_outline = gt_mask_outline - gt_mask
-        gt_mask_outline_color = cv2.merge([np.zeros_like(gt_mask_outline), gt_mask_outline, np.zeros_like(gt_mask_outline)])
+        #kernel = np.ones((3,3), np.uint8)
+        #pred_mask_outline = cv2.dilate((pred_mask), kernel, iterations=2)
+        #pred_mask_outline = pred_mask_outline - pred_mask
+        #pred_mask_outline_color = cv2.merge([np.zeros_like(pred_mask), np.zeros_like(pred_mask), pred_mask_outline])
+        #gt_mask_outline = cv2.dilate((gt_mask), kernel, iterations=2)
+        #gt_mask_outline = gt_mask_outline - gt_mask
+        #gt_mask_outline_color = cv2.merge([np.zeros_like(gt_mask_outline), gt_mask_outline, np.zeros_like(gt_mask_outline)])
         #gt_mask_outline_color = cv2.merge([np.zeros_like(gt_mask), gt_mask_outline, np.zeros_like(gt_mask)])
 
         #add everything together
         #result = cv2.addWeighted(image, 1, cv2.merge([np.zeros_like(gt_mask), gt_mask, np.zeros_like(gt_mask)]), 0.2, 0)
-        result = cv2.addWeighted(image, 1, gt_mask_outline_color, 0.5, 0)
+        result = cv2.addWeighted(image, 1, gt_mask_bgr, 0.5, 0)
         #result = cv2.addWeighted(result, 1, pred_mask_color, 0.2, 0)
-        result = cv2.addWeighted(result, 1, pred_mask_outline_color, 0.5, 0)
+        result = cv2.addWeighted(result, 1, pred_mask_bgr, 0.5, 0)
         
         # point1(x,y) = (pr_x,pr_y) is format of writing in bbox detections
         # calculate bounding boxes
@@ -158,13 +167,13 @@ if __name__ == '__main__':
         bbox_image = np.zeros_like(image)
         cv2.rectangle(bbox_image, (pr_x, pr_y), (pr_x + pr_w, pr_y + pr_h), (0,0,255),2)
         cv2.rectangle(bbox_image, (gt_x, gt_y), (gt_x + gt_w, gt_y + gt_h), (0,255,0),2)
-        result = cv2.addWeighted(result, 1, bbox_image, 0.5, 0)
+        result = cv2.addWeighted(result, 1, bbox_image, 0.8, 0)
 
         # write result to video or image file
         if VIDEO:
             out.write(result)
         else:
-            cv2.imwrite(output_images_path + '/' + str(gt_dict['image_id']) + '.jpg', result)
+            cv2.imwrite(output_images_path + '/' + str(gt_dict['image_id']) + '_' + str(gt_dict['category_id']) + '.jpg', result)
 
         # calculate bbox iou
         bbox_union_area = gt_area + pr_area - bbox_intersection_area
