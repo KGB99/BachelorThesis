@@ -9,5 +9,3 @@
 	- spine2? = 5
 	- spine3? = 6
 
-#TODO:
-- Fix labeling of progress in makeAnnotations and maybe also makeCoco? need to do +1
