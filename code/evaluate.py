@@ -13,6 +13,7 @@ if __name__ == '__main__':
     parser.add_argument("--preds_path", required=True, type=str)
     parser.add_argument("--labels_path", required=True, type=str)
     parser.add_argument("--images_dir", required=True, type=str)
+    parser.add_argument("--save_images", required=True, type=str)
     parser.add_argument("--output", required=True, type=str)
     parser.add_argument("--video", required=False, type=bool, default=False)
     args = parser.parse_args()
@@ -21,15 +22,16 @@ if __name__ == '__main__':
     bbox_preds_path = args.preds_path + '/bbox_detections.json'
     mask_preds_path = args.preds_path + '/mask_detections.json'
     VIDEO = args.video
+    save_images = args.save_images
     #'/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/test_annotations.json'
     test_annotations_path = args.labels_path
     #'/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/predicted_video.mp4'
-    output = './Annotations/' + args.output
+    output = './results_eval/' + args.output
     if not os.path.isdir(output):
         os.mkdir(output)
     if VIDEO:
         video_path = output + '/predicted_video.mp4'
-    else:
+    if save_images:
         if not os.path.isdir(output + '/evaluatedImages'):
             os.mkdir(output + '/evaluatedImages')
         output_images_path = output + '/evaluatedImages'
@@ -70,6 +72,7 @@ if __name__ == '__main__':
     for img_dict in test_annotations_dict['images']:
         img_mappings[img_dict['id']] = path_prepend + img_dict['file_name']
 
+
     #print(len(test_annotations_dict['annotations']))
     bboxes_found = 0
     bbox_avg_accuracy = 0
@@ -84,16 +87,23 @@ if __name__ == '__main__':
         fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
         out = cv2.VideoWriter(video_path, fourcc, 20.0, (width, height))
 
-    total_dets = 0
+    # the number of total possibilities for both, so if gt exists for either there is a +1
+    total_dets_screwdriver = 0
+    total_dets_powerdrill = 0
     for i,gt_dict in enumerate(test_annotations_dict['annotations']):
-        total_dets += 1
+        
         # load image
         print("Processing Image: " + img_mappings[gt_dict['image_id']])
-    
         gt_boxes = gt_dict['bbox']
         gt_seg_vertices = gt_dict['segmentation']
         gt_img_id = gt_dict['image_id']
         gt_cat_id = gt_dict['category_id']
+
+        #increase according category total
+        if (gt_cat_id == 1):
+            total_dets_powerdrill += 1
+        elif (gt_cat_id == 2):
+            total_dets_screwdriver += 1
 
         # load image
         img_path = img_mappings[gt_dict['image_id']]
@@ -189,9 +199,9 @@ if __name__ == '__main__':
         print("Segmentation IOU: " + str(round(pixel_iou,2)), flush=True)
         iou_seg_total += pixel_iou
         seg_found = seg_found + 1
-    ratio_bboxes_found = round(bboxes_found/total_dets, 2)
+    ratio_bboxes_found = 0#round(bboxes_found/total_dets, 2)
     iou_bbox = round(iou_bbox_total/bboxes_found, 2)
-    ratio_seg_found = round(seg_found/total_dets, 2)
+    ratio_seg_found = 0#round(seg_found/total_dets, 2)
     iou_segs = round(iou_seg_total/seg_found, 2)
     if VIDEO:
         out.release()
