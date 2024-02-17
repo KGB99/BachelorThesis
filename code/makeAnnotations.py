@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_ratio", required=False, type=float, default=0.9)
     parser.add_argument("--test", help="type true if creating testing annotations so it doesnt create two files", required=False, default=False, type=bool)
     parser.add_argument("--val_folders", help="If instead of a ratio you wish to allocate certain folders to validation, then write them here", required=False, type=str, default=[])
+    parser.add_argument("--with_val", required=False, type=bool, default=True)
     
     args = parser.parse_args()
     output_dir = args.output_dir
@@ -20,7 +21,7 @@ if __name__ == "__main__":
     val_folders = args.val_folders
     use_val_folders = (len(val_folders) != 0)
     TEST = args.test
-
+    with_val = args.with_val
     
 
     if not os.path.isdir('./Annotations'):
@@ -67,6 +68,7 @@ if __name__ == "__main__":
             #indexes for the training and val cutoffs
             train_max_index = info_dict[camera] * (train_ratio)
             train_to_val_ratio_dict[camera] = (train_max_index, info_dict[camera])
+            print("Max index for training " + str(train_max_index))
 
         len_coco = len(coco_dict)
         for j,img_id in enumerate(coco_dict[camera]):
@@ -75,9 +77,13 @@ if __name__ == "__main__":
             img_dict = coco_dict[camera][img_id]
             if not TEST:
                 if not use_val_folders:
-                    if (j > train_max_index):
-                        val_dict["annotations"].append(img_dict['mask'])
-                        val_dict["images"].append(img_dict['img'])
+                    if (with_val):
+                        if (j > train_max_index):
+                            val_dict["annotations"].append(img_dict['mask'])
+                            val_dict["images"].append(img_dict['img'])
+                        else:
+                            train_dict["annotations"].append(img_dict['mask'])
+                            train_dict["images"].append(img_dict['img']) 
                     else:
                         train_dict["annotations"].append(img_dict['mask'])
                         train_dict["images"].append(img_dict['img']) 
@@ -108,9 +114,10 @@ if __name__ == "__main__":
         f = open("./Annotations/" + output_dir + "/train_annotations.json", "w")
         f.write(json.dumps(train_dict))
         f.close()
-        f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
-        f.write(json.dumps(val_dict))
-        f.close()
+        if with_val:
+            f = open("./Annotations/" + output_dir + "/val_annotations.json", "w")
+            f.write(json.dumps(val_dict))
+            f.close()
     if not TEST:
         if not use_val_folders:
             print("Ratios of training to validation:")
