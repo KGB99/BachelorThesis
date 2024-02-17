@@ -30,10 +30,12 @@ if __name__ == '__main__':
     coco_dict = json.load(f)
     f.close()
 
-    for camera in coco_dict:
+    for i,camera in enumerate(coco_dict):
+        print("Camera: " + str(i) + "/" + str(len(coco_dict)))
         camera_dict = coco_dict[camera]
         split_counter = 1
-        for image in camera_dict:
+        for j,image in enumerate(camera_dict):
+            print("Camera: " + str(i) + "/" + str(len(coco_dict)) + " | Image: " + str(j) + "/" + str(len(camera_dict)))
             camera_len = len(camera_dict.keys())
             train_limit = int(train_split * camera_len)
             img_dict = camera_dict[image]['img']
