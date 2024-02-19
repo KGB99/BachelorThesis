@@ -7,13 +7,24 @@ import pycocotools.mask as maskUtils
 from matplotlib import pyplot as plt
 import argparse
 
+#pixel accuracy is: (nr. correctly classified pixels) / (total number of pixels)
+def calc_pixel_acc(pred_mask_bool, gt_mask_bool):
+    h,w,_ = pred_mask_bool.shape
+    print(pred_mask_bool.shape)
+    correct_pixels = np.sum(np.logical_and(pred_mask_bool, gt_mask_bool))
+    total_pixels = h * w
+    print(correct_pixels)
+    print(total_pixels)
+
+    exit()
+    return
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--preds_path", required=True, type=str)
     parser.add_argument("--labels_path", required=True, type=str)
     parser.add_argument("--images_dir", required=True, type=str)
-    parser.add_argument("--save_images", required=True, type=str)
+    parser.add_argument("--save_images", required=False, default=False, type=bool)
     parser.add_argument("--output", required=True, type=str)
     parser.add_argument("--video", required=False, type=bool, default=False)
     args = parser.parse_args()
@@ -87,9 +98,11 @@ if __name__ == '__main__':
         fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
         out = cv2.VideoWriter(video_path, fourcc, 20.0, (width, height))
 
-    # the number of total possibilities for both, so if gt exists for either there is a +1
+    # variables for total gts and found predictions
     total_dets_screwdriver = 0
     total_dets_powerdrill = 0
+    found_dets_screwdriver = 0
+    found_dets_powerdrill = 0
     for i,gt_dict in enumerate(test_annotations_dict['annotations']):
         
         # load image
@@ -113,14 +126,22 @@ if __name__ == '__main__':
 
         # load predicted labels
         try:
+            # this makes sure its the same category, so if its not the same category then this does not find something
             pred_bbox = bbox_dict[gt_img_id][gt_cat_id]['bbox']
             pred_seg = mask_dict[gt_img_id][gt_cat_id]['segmentation']
         except KeyError:
-            print('Bounding Box or Segmentation not found!')
+            print('Bounding Box or Segmentation not found for this category!')
             continue
         
+        #increase categories found which matches
+        if (gt_cat_id == 1):
+            found_dets_powerdrill += 1
+        elif (gt_cat_id == 2):
+            found_dets_screwdriver += 1
+
         # decode masks
         pred_mask = maskUtils.decode(pred_seg)
+        pred_mask_bool = pred_mask.astype(bool)
         #pred_mask = pred_mask * 255
         pred_mask_bgr = (cv2.cvtColor(pred_mask.astype(np.uint8), cv2.COLOR_GRAY2BGR)) * np.array([0,0,255], dtype=np.uint8)
         #result = cv2.addWeighted(image, 1, pred_mask_bgr, 0.5, 0)
@@ -146,6 +167,8 @@ if __name__ == '__main__':
         #gt_mask_outline = gt_mask_outline - gt_mask
         #gt_mask_outline_color = cv2.merge([np.zeros_like(gt_mask_outline), gt_mask_outline, np.zeros_like(gt_mask_outline)])
         #gt_mask_outline_color = cv2.merge([np.zeros_like(gt_mask), gt_mask_outline, np.zeros_like(gt_mask)])
+
+        pixel_accuracy = calc_pixel_acc(pred_mask_bool, gt_mask_bool)
 
         #add everything together
         #result = cv2.addWeighted(image, 1, cv2.merge([np.zeros_like(gt_mask), gt_mask, np.zeros_like(gt_mask)]), 0.2, 0)
