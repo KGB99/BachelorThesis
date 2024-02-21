@@ -53,6 +53,7 @@ def createCocoFromMultipleFolders(args):
     AMODAL = args.amodal
     LIMIT_FOLDERS = args.limit_folder
     path_splitter = args.path_splitter + '/'
+    stride = args.stride
 
     #status print
     print("Path: " + parent_path)
@@ -205,6 +206,7 @@ def createCocoFromSingleFolder(args):
     AMODAL = args.amodal
     LIMIT_FOLDERS = args.limit_folder
     path_splitter = args.path_splitter + '/'
+    stride = args.stride
 
 
     #status print
@@ -254,6 +256,8 @@ def createCocoFromSingleFolder(args):
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
+            if ((i % stride) != 0):
+                continue
             print('Progress: Camera=' + str(cameraNr + 1) + '/' + str(len_parent_folders) + ' | Image=' + str(i + 1) + '/' + str(len_bitMaskList) + ' | Bitmask=' + str((i%2) + 1) + '/2')
             img_id = str(img)
             bitmask_id = str(bitmask)
@@ -358,6 +362,7 @@ if __name__ == "__main__":
     parser.add_argument("--bitmask_file_type", help="File type of bitmasks e.g: jpg or png", required=True, type=str)
     parser.add_argument("--write_missed", help="option to write the missed images to a file", required=False, default=False, type=bool)
     parser.add_argument("--path_splitter", help="point at which image path gets split and put into the result_dict under 'file_name'", required=False, default='mvpsp', type=str)
+    parser.add_argument("--stride", required=False, default=1, type=int)
     args = parser.parse_args()
     
 
