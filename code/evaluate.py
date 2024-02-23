@@ -2,6 +2,7 @@ import cv2
 import os 
 import json 
 import numpy as np
+import pandas as pd
 import ast
 import pycocotools.mask as maskUtils
 from matplotlib import pyplot as plt
@@ -157,8 +158,16 @@ if __name__ == '__main__':
     total_dets_powerdrill = 0
     found_dets_screwdriver = 0
     found_dets_powerdrill = 0
+    iteration = 0
+    eval_list = []
     for i,gt_dict in enumerate(test_annotations_dict['annotations']):
-        
+        # used to store all results for later processing, im using dicts cause appending to df every iteration is too expensive
+        eval_dict = {}
+        eval_dict['id'] = iteration
+        eval_dict['image_id'] = gt_dict['image_id']
+        eval_dict['category_id'] = gt_dict['category_id']
+        eval_dict['image_file'] = img_mappings[gt_dict['image_id']]
+
         # load image
         print("Processing Image: " + img_mappings[gt_dict['image_id']])
         gt_bbox = gt_dict['bbox']
@@ -171,7 +180,7 @@ if __name__ == '__main__':
             total_dets_powerdrill += 1
         elif (gt_cat_id == 2):
             total_dets_screwdriver += 1
-
+        
         # load image
         img_path = img_mappings[gt_dict['image_id']]
         image = cv2.imread(img_path)
@@ -185,6 +194,13 @@ if __name__ == '__main__':
             pred_seg = mask_dict[gt_img_id][gt_cat_id]['segmentation']
         except KeyError:
             print('Bounding Box or Segmentation not found for this category!')
+            eval_dict['prediction_found'] = 0
+            eval_dict['bbox_pixel_accuracy'] = 0
+            eval_dict['mask_pixel_accuracy'] = 0
+            eval_dict['bbox_iou'] = 0
+            eval_dict['mask_iou'] = 0
+            eval_dict['bbox_dice_coefficient'] = 0
+            eval_dict['mask_dice_coefficient'] = 0
             continue
         
         #increase categories found which matches
@@ -192,6 +208,8 @@ if __name__ == '__main__':
             found_dets_powerdrill += 1
         elif (gt_cat_id == 2):
             found_dets_screwdriver += 1
+        #add to eval_dict that a prediciton was found
+        eval_dict['prediction_found'] = 1
 
         # decode masks
         pred_mask = maskUtils.decode(pred_seg)
