@@ -219,7 +219,7 @@ def createCocoFromSingleFolder(args):
         print("No folders given in parent_folders argument, so going through all of them...")
         parent_folders = os.listdir(parent_path)
 
-    id = 1
+    id = 0
     coco_dict = {}
     missed_images = []
     missed_bitmasks = []
@@ -248,14 +248,20 @@ def createCocoFromSingleFolder(args):
         for image in gt_dict:
             for i,bitmask in enumerate(gt_dict[image]):
                 # Powerdrill id = 1and Screwdriver id = 2
-                if bitmask['obj_id'] in [1,2]:
-                    bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
+                #if bitmask['obj_id'] in [1,2]: this has been moved down to the main loop so that i can add the gt_exists option to dicts for false positives in evaluation
+                bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
         print('Filtering for ' + camera + ' done!')   
 
         #iterate through bitmasks, calculate annotation and add to dictionary
         print('Calculating Polygon vertices for COCO Dataset...')
         len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
+            id += 1
+            if object_id not in [1,2]:
+                coco_dict[camera][id] = {}
+                coco_dict[camera][id]["gt_exists"] = 0
+                continue
+
             if ((i % stride) != 0):
                 continue
             print('Progress: Camera=' + str(cameraNr + 1) + '/' + str(len_parent_folders) + ' | Image=' + str(i + 1) + '/' + str(len_bitMaskList) + ' | Bitmask=' + str((i%2) + 1) + '/2')
@@ -294,6 +300,8 @@ def createCocoFromSingleFolder(args):
             try:
                 mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
                 if (mask_dict["segmentation"] == -1 or mask_dict["bbox"] == -1 or mask_dict["area"] == -1):
+                    coco_dict[camera][id] = {}
+                    coco_dict[camera][id]["gt_exists"] = 0
                     continue
             except Exception:
                 print("EXCEPTION AT IMAGE: " + image_path)
@@ -310,9 +318,10 @@ def createCocoFromSingleFolder(args):
             
             #from now on we can assume that this image exists
             coco_dict[camera][id] = {}
+            coco_dict[camera][id]["gt_exists"] = 1
             coco_dict[camera][id]["img"] = img_dict
             coco_dict[camera][id]["mask"] = mask_dict
-            id += 1
+            #id += 1
     print('Polygons and annotaions done!')
     print("Writing output files...")
 
