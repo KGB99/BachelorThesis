@@ -3,5 +3,5 @@ Data_subset
 Annotations
 *.DS_Store
 Papers/*
-slurm-*
+slurm*
 
