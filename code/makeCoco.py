@@ -258,8 +258,15 @@ def createCocoFromSingleFolder(args):
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
             id += 1
             if object_id not in [1,2]:
+                img_dict = {}
+                img_dict['id'] = id
+                img_dict['width'] = width
+                img_dict['height'] = height
+                img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
                 coco_dict[camera][id] = {}
                 coco_dict[camera][id]["gt_exists"] = 0
+                coco_dict[camera][id]["img"] = img_dict
+                coco_dict[camera][id]["mask"] = []
                 continue
 
             if ((i % stride) != 0):
