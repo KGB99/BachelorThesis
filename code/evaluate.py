@@ -77,6 +77,8 @@ def calc_dice(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--preds_path", required=True, type=str)
+    parser.add_argument("--bbox_preds", required=False, default='bbox_detections.json', type=str)
+    parser.add_argument("--mask_preds", required=False, default='mask_detections.json', type=str)
     parser.add_argument("--labels_path", required=True, type=str)
     parser.add_argument("--images_dir", required=True, type=str)
     parser.add_argument("--save_images", required=False, default=False, type=bool)
@@ -85,8 +87,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     images_dir_path = args.images_dir
     #/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/results
-    bbox_preds_path = args.preds_path + '/bbox_detections.json'
-    mask_preds_path = args.preds_path + '/mask_detections.json'
+    bbox_preds_path = args.preds_path + '/' + args.bbox_preds
+    mask_preds_path = args.preds_path + '/' + args.mask_preds
     VIDEO = args.video
     save_images = args.save_images
     #'/Users/kerim/dev/BachelorThesis/Annotations/testSetSubsetSSD/test_annotations.json'
@@ -245,6 +247,15 @@ if __name__ == '__main__':
         bbox_iou, mask_iou = calc_iou(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
         bbox_dice_coefficient, mask_dice_coefficient = calc_dice(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
         
+        # add values to eval_dict
+        eval_dict['bbox_pixel_accuracy'] = bbox_pixel_accuracy
+        eval_dict['mask_pixel_accuracy'] = mask_pixel_accuracy
+        eval_dict['bbox_iou'] = bbox_iou
+        eval_dict['mask_iou'] = mask_iou
+        eval_dict['bbox_dice_coefficient'] = bbox_dice_coefficient
+        eval_dict['mask_dice_coefficient'] = mask_dice_coefficient
+        eval_dict['result_file'] = (output_images_path + '/' + str(gt_dict['image_id']) + '_' + str(gt_dict['category_id']) + '.jpg')
+        eval_list.append(eval_dict)
         
         # create a blue mask for the overlapping regions, red for preds and green for ground truth
         and_mask_bool = np.logical_and(pred_mask_bool, gt_mask_bool)
@@ -288,6 +299,11 @@ if __name__ == '__main__':
     iou_bbox = round(iou_bbox_total/bboxes_found, 2)
     ratio_seg_found = 0#round(seg_found/total_dets, 2)
     iou_segs = round(iou_seg_total/seg_found, 2)
+
+    # convert eval_list to pandas df and save it as csv for further analysis
+    df = pd.DataFrame(eval_list)
+    df.to_csv(output + '/eval_values.csv', index=False)
+
     if VIDEO:
         out.release()
     cv2.destroyAllWindows()
