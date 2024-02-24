@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
         len_coco = len(coco_dict)
         for j,img_id in enumerate(coco_dict[camera]):
-            if coco_dict[camera][id]["gt_exists"] == 0: 
+            if coco_dict[camera][img_id]["gt_exists"] == 0: 
                 # currently doing continue cause this is how i used to do it
                 # should try to train with some examples of no ground truths too
                 continue 
