@@ -4,4 +4,5 @@ Annotations
 *.DS_Store
 Papers/*
 slurm*
+.ipynb_checkpoints
 
