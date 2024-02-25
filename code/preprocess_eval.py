@@ -247,6 +247,12 @@ def eval_yolact(args):
                     # i think at this point pred_exists should already be 0, but just incase
                     #eval_dict[curr_id]['pred_exists'] = 0
                     continue
+                if gt_cat_id == 1:
+                    eval_dict[curr_id]['pred_powerdrill'] = 0
+                elif gt_cat_id == 2:
+                    eval_dict[curr_id]['pred_screwdriver'] = 0
+                else:
+                    raise ValueError("This gt is neither a powerdrill nor a screwdriver!")
 
                 # decode masks
                 pred_mask = maskUtils.decode(pred_seg)
