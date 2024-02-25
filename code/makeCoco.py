@@ -248,12 +248,12 @@ def createCocoFromSingleFolder(args):
         seen = []
         for image in gt_dict:
             for i,bitmask in enumerate(gt_dict[image]):
-                # Powerdrill id = 1and Screwdriver id = 2
+                # Powerdrill id = 1 and Screwdriver id = 2
                 if bitmask['obj_id'] in [1,2]: 
                     bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
                     seen.append(image)
                 elif (image not in seen):
-                    bitMaskList.append((image,i,bitmask['obj_id']))
+                    bitMaskList.append((image,i,-1))
                     seen.append(image)
         print('Filtering for ' + camera + ' done!')   
 
@@ -262,17 +262,6 @@ def createCocoFromSingleFolder(args):
         len_bitMaskList = len(bitMaskList)
         for i,(img, bitmask, object_id) in enumerate(bitMaskList):
             id += 1
-            if object_id not in [1,2]:
-                img_dict = {}
-                img_dict['id'] = id
-                img_dict['width'] = width
-                img_dict['height'] = height
-                img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
-                coco_dict[camera][id] = {}
-                coco_dict[camera][id]["gt_exists"] = 0
-                coco_dict[camera][id]["img"] = img_dict
-                coco_dict[camera][id]["mask"] = []
-                continue
 
             if ((eval(img) % stride) != 0):
                 continue
@@ -301,7 +290,7 @@ def createCocoFromSingleFolder(args):
                 temp = Image.open(bitmask_path)
             except:
                 continue
-
+                
             # start calculating masks and prepare the json dicts
             temp.convert("1")
             width, height = temp.size
@@ -312,33 +301,36 @@ def createCocoFromSingleFolder(args):
             try:
                 mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
                 if (mask_dict["segmentation"] == -1 or mask_dict["bbox"] == -1 or mask_dict["area"] == -1):
-                    #coco_dict[camera][id] = {}
-                    #coco_dict[camera][id]["gt_exists"] = 0
-                    #img_dict = {}
-                    #img_dict['id'] = id
-                    #img_dict['width'] = width
-                    #img_dict['height'] = height
-                    #img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
+                    # continue cause theres nothing to learn from
                     continue
             except Exception:
                 print("EXCEPTION AT IMAGE: " + image_path)
                 continue
+            
+            # now that all calculations are finished cleanly we can actually add it to the labels
+            if img not in coco_dict[camera]:
+                img_dict = {}
+                img_dict['id'] = (int(camera.split('/')[1]+img_id))
+                img_dict['width'] = width
+                img_dict['height'] = height
+                img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
+                coco_dict[camera][img] = {}
+                coco_dict[camera][img]["gt_exists"] = 0
+                coco_dict[camera][img]["img"] = img_dict
+                coco_dict[camera][img]["masks"] = []
+            
+            if object_id not in [1,2]:
+                continue
+            
+            if coco_dict[camera][img]['gt_exists'] == 0:
+                coco_dict[camera][img]['gt_exists'] = 1
+        
             mask_dict["iscrowd"] = 0
-            mask_dict["image_id"] = id
+            mask_dict["image_id"] = (int(camera.split('/')[1]+img_id))
             mask_dict["category_id"] = object_id
             mask_dict["id"] = id
-            img_dict = {}
-            img_dict['id'] = id
-            img_dict['width'] = width
-            img_dict['height'] = height
-            img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
+            coco_dict[camera][img]["masks"].append(mask_dict)
             
-            #from now on we can assume that this image exists
-            coco_dict[camera][id] = {}
-            coco_dict[camera][id]["gt_exists"] = 1
-            coco_dict[camera][id]["img"] = img_dict
-            coco_dict[camera][id]["mask"] = mask_dict
-            #id += 1
     print('Polygons and annotaions done!')
     print("Writing output files...")
 

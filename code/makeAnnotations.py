@@ -83,32 +83,38 @@ if __name__ == "__main__":
                 if not use_val_folders:
                     if (with_val):
                         if (j > train_max_index):
-                            if (len(img_dict['mask']) != 0):
-                                val_dict["annotations"].append(img_dict['mask'])
+                            if (len(img_dict['masks']) != 0):
+                                for mask in img_dict['masks']:
+                                    val_dict["annotations"].append(mask)
                             val_dict["images"].append(img_dict['img'])
                         else:
                             if (len(img_dict['mask']) != 0):
-                                train_dict["annotations"].append(img_dict['mask'])
+                                for mask in img_dict['masks']:
+                                    train_dict["annotations"].append(mask)
                             train_dict["images"].append(img_dict['img']) 
                     else:
                         if (len(img_dict['mask']) != 0):
-                            train_dict["annotations"].append(img_dict['mask'])
+                            for mask in img_dict['masks']:
+                                train_dict["annotations"].append(mask)
                         train_dict["images"].append(img_dict['img']) 
                 else:
                     if camera in val_folders:
                         if (len(img_dict['mask']) != 0):
-                            val_dict["annotations"].append(img_dict['mask'])
+                            for mask in img_dict['masks']:
+                                val_dict["annotations"].append(mask)
                         val_dict["images"].append(img_dict['img'])
                         if camera not in val_folders_confirmation.keys():
                             val_folders_confirmation[camera] = 0
                         val_folders_confirmation[camera] += 1
                     else:
                         if (len(img_dict['mask']) != 0):
-                            train_dict["annotations"].append(img_dict['mask'])
+                            for mask in img_dict['masks']:
+                                train_dict["annotations"].append(mask)
                         train_dict["images"].append(img_dict['img'])
             else:
                 if (img_dict['gt_exists'] == 1):
-                    test_dict["annotations"].append(img_dict['mask'])
+                    for mask in img_dict['masks']:
+                        test_dict["annotations"].append(mask)
                 test_dict["images"].append(img_dict['img'])
     print('Annotaions done!')
 
