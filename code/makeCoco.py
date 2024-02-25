@@ -245,11 +245,16 @@ def createCocoFromSingleFolder(args):
         gt_json_file = open(curr_folder_path + '/' + camera + '/scene_gt.json')
         gt_dict = json.load(gt_json_file)
         bitMaskList = []
+        seen = []
         for image in gt_dict:
             for i,bitmask in enumerate(gt_dict[image]):
                 # Powerdrill id = 1and Screwdriver id = 2
-                #if bitmask['obj_id'] in [1,2]: this has been moved down to the main loop so that i can add the gt_exists option to dicts for false positives in evaluation
-                bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
+                if bitmask['obj_id'] in [1,2]: 
+                    bitMaskList.append((image,i,bitmask['obj_id'])) # e.g: 001050_000001 becomes (1050,1)
+                    seen.append(image)
+                elif (image not in seen):
+                    bitMaskList.append((image,i,bitmask['obj_id']))
+                    seen.append(image)
         print('Filtering for ' + camera + ' done!')   
 
         #iterate through bitmasks, calculate annotation and add to dictionary
@@ -269,7 +274,7 @@ def createCocoFromSingleFolder(args):
                 coco_dict[camera][id]["mask"] = []
                 continue
 
-            if ((i % stride) != 0):
+            if ((eval(img) % stride) != 0):
                 continue
             print('Progress: Camera=' + str(cameraNr + 1) + '/' + str(len_parent_folders) + ' | Image=' + str(i + 1) + '/' + str(len_bitMaskList) + ' | Bitmask=' + str((i%2) + 1) + '/2')
             img_id = str(img)
@@ -307,8 +312,13 @@ def createCocoFromSingleFolder(args):
             try:
                 mask_dict["segmentation"], mask_dict["bbox"], mask_dict["area"] = create_mask_annotation(np.array(bitmask_curr), APPROX)
                 if (mask_dict["segmentation"] == -1 or mask_dict["bbox"] == -1 or mask_dict["area"] == -1):
-                    coco_dict[camera][id] = {}
-                    coco_dict[camera][id]["gt_exists"] = 0
+                    #coco_dict[camera][id] = {}
+                    #coco_dict[camera][id]["gt_exists"] = 0
+                    #img_dict = {}
+                    #img_dict['id'] = id
+                    #img_dict['width'] = width
+                    #img_dict['height'] = height
+                    #img_dict['file_name'] = (images_path.split(path_splitter)[1]) + '/' + img_id + '.' + image_file_ending
                     continue
             except Exception:
                 print("EXCEPTION AT IMAGE: " + image_path)
@@ -387,10 +397,10 @@ if __name__ == "__main__":
     if not os.path.isdir('Annotations'):
         os.mkdir('Annotations')
 
-    if args.multiple_folders:
-        createCocoFromMultipleFolders(args)
-    else:
-        createCocoFromSingleFolder(args)    
+ #   if args.multiple_folders:
+        #createCocoFromMultipleFolders(args)
+#    else:
+    createCocoFromSingleFolder(args)    
     end = time.time()
     print('Time of execution: ' + str(end-start) + 's')
     print('Done working on path:' + args.parent_path + ' on folders: ' + str(args.folders))

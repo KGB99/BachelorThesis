@@ -83,26 +83,32 @@ if __name__ == "__main__":
                 if not use_val_folders:
                     if (with_val):
                         if (j > train_max_index):
-                            val_dict["annotations"].append(img_dict['mask'])
+                            if (len(img_dict['mask']) != 0):
+                                val_dict["annotations"].append(img_dict['mask'])
                             val_dict["images"].append(img_dict['img'])
                         else:
-                            train_dict["annotations"].append(img_dict['mask'])
+                            if (len(img_dict['mask']) != 0):
+                                train_dict["annotations"].append(img_dict['mask'])
                             train_dict["images"].append(img_dict['img']) 
                     else:
-                        train_dict["annotations"].append(img_dict['mask'])
+                        if (len(img_dict['mask']) != 0):
+                            train_dict["annotations"].append(img_dict['mask'])
                         train_dict["images"].append(img_dict['img']) 
                 else:
                     if camera in val_folders:
-                        val_dict["annotations"].append(img_dict['mask'])
+                        if (len(img_dict['mask']) != 0):
+                            val_dict["annotations"].append(img_dict['mask'])
                         val_dict["images"].append(img_dict['img'])
                         if camera not in val_folders_confirmation.keys():
                             val_folders_confirmation[camera] = 0
                         val_folders_confirmation[camera] += 1
                     else:
-                        train_dict["annotations"].append(img_dict['mask'])
+                        if (len(img_dict['mask']) != 0):
+                            train_dict["annotations"].append(img_dict['mask'])
                         train_dict["images"].append(img_dict['img'])
             else:
-                test_dict["annotations"].append(img_dict['mask'])
+                if (img_dict['gt_exists'] == 1):
+                    test_dict["annotations"].append(img_dict['mask'])
                 test_dict["images"].append(img_dict['img'])
     print('Annotaions done!')
 
