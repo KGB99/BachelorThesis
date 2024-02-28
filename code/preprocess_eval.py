@@ -63,6 +63,32 @@ def calc_dice(pred_mask_bool, gt_mask_bool):
     return mask_dice#bbox_dice, mask_dice
 
 def eval_yolo(args):
+    test_annotations_path = args.labels_path
+    images_dir_path = args.images_dir
+    output = './results_eval/' + args.output
+    preds_path = args.preds_path # should be the folder with all the .txt
+    if args.save_images:
+        if not os.path.isdir(output + '/evaluatedImages'):
+            os.mkdir(output + '/evaluatedImages')
+        output_images_path = output + '/evaluatedImages'
+
+    f = open(test_annotations_path, 'r')
+    test_annotations_dict = json.load(f)
+    f.close()
+
+    # dictionary for all evaluations
+    eval_dict = {}
+
+    # get all the files in the preds directory and iterate through them while saving the predictions in a dict
+    preds_path_files = os.listdir(preds_path)
+    preds_dict = {}
+    for preds_file in preds_path_files:
+        camera_id = preds_file[:6]
+        print(camera_id)
+        image_id = preds_file[6:12]
+        print(image_id)
+        exit()
+
     return
 
 def eval_yolact(args):
