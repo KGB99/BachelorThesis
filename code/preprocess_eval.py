@@ -90,17 +90,55 @@ def eval_yolo(args):
         # due to my naming convention first 6 letters are cam id and following 6 are img id
         camera_id = preds_file[:6]
         image_id = preds_file[6:12] 
-        if not (camera_id in preds_dict):
+        if not (camera_id in eval_dict):
             preds_dict[camera_id] = {}
-        if not (image_id in preds_dict[camera_id]):
+        if not (image_id in eval_dict[camera_id]):
             preds_dict[camera_id][image_id] = {}
-            preds_dict[camera_id][image_id]['
-            with open(preds_path + '/' + preds_file, 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    line = line[:-1] # this makes sure /n does not come with
-                    
-                exit()
+            preds_dict[camera_id][image_id]['pred_screwdriver_conf'] = -1
+            preds_dict[camera_id][image_id]['pred_powerdrill_conf'] = -1
+            preds_dict[camera_id][image_id]['pred_screwdriver'] = 0
+            preds_dict[camera_id][image_id]['pred_powerdrill'] = 0
+        with open(preds_path + '/' + preds_file, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line[:-1] # this makes sure /n does not come with
+                line = line.split(" ") # splits up the lines prediction into its values
+                object_id = line[0]
+                box_x = line[1]
+                box_y = line[2]
+                box_w = line[3]
+                box_h = line[4]
+                confidence = line[5]
+                if object_id == 1:
+                    pred_dict[camera_id][image_id]['pred_powerdrill'] = 1
+                    if (pred_dict[camera_id][image_id]['pred_powerdrill_conf'] < confidence):
+                        pred_dict[camera_id][image_id]['pred_powerdrill_conf'] = confidence
+                        preds_dict[camera_id][image_id]['bbox_powerdrill'] = (box_x, box_y, box_w, box_h)
+                elif object_id == 2:
+                    pred_dict[camera_id][image_id]['pred_screwdriver'] = 1
+                    if (pred_dict[camera_id][image_id]['pred_screwdriver_conf'] < confidence):
+                        pred_dict[camera_id][image_id]['pred_screwdriver_conf'] = confidence
+                        preds_dict[camera_id][image_id]['bbox_screwdriver'] = (box_x, box_y, box_w, box_h)
+                else:
+                    raise ValueError("This pred is neither a powerdrill nor a screwdriver!")
+        
+        for i,camera in enumerate(test_annotations_dict):
+            len_camera_dict = len(test_annotations_dict[camera])
+            for j, image in enumerate(test_annotations_dict[camera]):
+                # load the gt of the image at this camera
+                gt_dict = test_annotations_dict[camera][image]
+                curr_id = gt_dict['img']['id'] # this is the unique id i provided in makeCoco.py so each id is unique to an image
+
+                # status update print
+                print(f"Camera: {i:02} / {len_test_annotations_dict} "
+                      f"| Image: {j:05} / {len_camera_dict} "
+                      f"| Filename: {gt_dict['img']['file_name']} ", 
+                      flush=True)
+                
+                if gt_dict['gt_exists'] == 0:
+                    eval_dict[curr_id]['gt_powerdrill'] = 0
+                    eval_dict[curr_id]['gt_screwdriver'] = 0
+                    continue
         
     return
 
@@ -143,7 +181,7 @@ def eval_yolact(args):
         #note down that the prediction exists
         if curr_id not in eval_dict:
             eval_dict[curr_id] = {}
-            eval_dict[curr_id]['pred_exists'] = 1
+            #eval_dict[curr_id]['pred_exists'] = 1
         
         if curr_id in bbox_dict:
             if curr_cat in bbox_dict[curr_id]:
@@ -171,7 +209,7 @@ def eval_yolact(args):
         
         if curr_id not in eval_dict:
             eval_dict[curr_id] = {}
-            eval_dict[curr_id]['pred_exists'] = 1
+            #eval_dict[curr_id]['pred_exists'] = 1
             
         if curr_id in mask_dict:
             if curr_cat in mask_dict[curr_id]:
