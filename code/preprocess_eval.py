@@ -67,6 +67,10 @@ def eval_yolo(args):
     images_dir_path = args.images_dir
     output = './results_eval/' + args.output
     preds_path = args.preds_path # should be the folder with all the .txt
+    
+    if not os.path.isdir(output):
+        os.mkdir(output)
+
     if args.save_images:
         if not os.path.isdir(output + '/evaluatedImages'):
             os.mkdir(output + '/evaluatedImages')
@@ -83,12 +87,21 @@ def eval_yolo(args):
     preds_path_files = os.listdir(preds_path)
     preds_dict = {}
     for preds_file in preds_path_files:
+        # due to my naming convention first 6 letters are cam id and following 6 are img id
         camera_id = preds_file[:6]
-        print(camera_id)
-        image_id = preds_file[6:12]
-        print(image_id)
-        exit()
-
+        image_id = preds_file[6:12] 
+        if not (camera_id in preds_dict):
+            preds_dict[camera_id] = {}
+        if not (image_id in preds_dict[camera_id]):
+            preds_dict[camera_id][image_id] = {}
+            preds_dict[camera_id][image_id]['
+            with open(preds_path + '/' + preds_file, 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    line = line[:-1] # this makes sure /n does not come with
+                    
+                exit()
+        
     return
 
 def eval_yolact(args):
