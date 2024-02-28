@@ -19,7 +19,7 @@
                 - id
                 - width
                 - height
-                - filename
+                - file_name
             - mask
                 - segmentation
                 - bbox
