@@ -241,7 +241,14 @@ def eval_yolact(args):
                 try:
                     # this makes sure its the same category, so if its not the same category then this does not find something
                     pred_bbox = bbox_dict[gt_img_id][gt_cat_id]['bbox']
+                    pred_conf = bbox_dict[gt_img_id][gt_cat_id]['score']
                     pred_seg = mask_dict[gt_img_id][gt_cat_id]['segmentation']
+                    # i believe segmentation and bbox confidence should be the same since its part of the same prediction
+                    #pred_seg_conf = mask_dict[gt_img_id][gt_cat_id]['score']
+                    #if pred_bbox_conf == pred_seg_conf:
+                    #    print("BOTH SAME")
+                    #continue
+                    
                 except KeyError:
                     print('No prediction found for this category!')
                     # i think at this point pred_exists should already be 0, but just incase
@@ -249,8 +256,10 @@ def eval_yolact(args):
                     continue
                 if gt_cat_id == 1:
                     eval_dict[curr_id]['pred_powerdrill'] = 1
+                    eval_dict[curr_id]['pred_powerdrill_conf'] = pred_conf
                 elif gt_cat_id == 2:
                     eval_dict[curr_id]['pred_screwdriver'] = 1
+                    eval_dict[curr_id]['pred_screwdriver_conf'] = pred_conf
                 else:
                     raise ValueError("This gt is neither a powerdrill nor a screwdriver!")
 
