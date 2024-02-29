@@ -51,6 +51,30 @@ def calc_iou(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox):
     mask_iou = np.sum(intersection) / np.sum(union)
     return bbox_iou, mask_iou
 
+def calc_iou_bbox(pred_bbox, gt_bbox):
+    # calculate bounding box iou
+    pr_x = int(pred_bbox[0])
+    pr_y = int(pred_bbox[1])
+    pr_w = int(pred_bbox[2])
+    pr_h = int(pred_bbox[3])
+    pr_area = pr_w * pr_h
+
+    gt_x = int(gt_bbox[0])
+    gt_y = int(gt_bbox[1])
+    gt_w = int(gt_bbox[2])
+    gt_h = int(gt_bbox[3])
+    gt_area = gt_w * gt_h
+
+    i_x0 = max(pr_x, gt_x)
+    i_y0 = max(pr_y, gt_y)
+    i_x1 = min(pr_x+pr_w, gt_x + gt_w)
+    i_y1 = min(pr_y + pr_h, gt_y + gt_h)
+
+    bbox_intersection_area = max(0,(i_x1 - i_x0)) * max(0,(i_y1 - i_y0)) # if either value is negative then area is 0
+    bbox_union_area = gt_area + pr_area - bbox_intersection_area
+    bbox_iou = bbox_intersection_area/bbox_union_area
+    return bbox_iou
+
 def calc_dice(pred_mask_bool, gt_mask_bool):
     #calc and masks
     #bbox_and = np.logical_and(pred_bbox, gt_bbox)
@@ -86,7 +110,10 @@ def eval_yolo(args):
     # get all the files in the preds directory and iterate through them while saving the predictions in a dict
     preds_path_files = os.listdir(preds_path)
     preds_dict = {}
-    for preds_file in preds_path_files:
+    len_preds_path_files = len(preds_path_files)
+    print("Processing predictions...")
+    for i,preds_file in enumerate(preds_path_files):
+        print(f"Prediction file: {i:9} / {len_preds_path_files}")
         # due to my naming convention first 6 letters are cam id and following 6 are img id
         camera_id = preds_file[:6]
         image_id = preds_file[6:12] 
@@ -110,18 +137,23 @@ def eval_yolo(args):
                 box_h = line[4]
                 confidence = line[5]
                 if object_id == 1:
-                    pred_dict[camera_id][image_id]['pred_powerdrill'] = 1
-                    if (pred_dict[camera_id][image_id]['pred_powerdrill_conf'] < confidence):
-                        pred_dict[camera_id][image_id]['pred_powerdrill_conf'] = confidence
-                        preds_dict[camera_id][image_id]['bbox_powerdrill'] = (box_x, box_y, box_w, box_h)
+                    preds_dict[camera_id][image_id]['pred_powerdrill'] = 1
+                    if (preds_dict[camera_id][image_id]['pred_powerdrill_conf'] < confidence):
+                        preds_dict[camera_id][image_id]['pred_powerdrill_conf'] = confidence
+                        # TODO: 'unnormalize' bbox pred cords
+
+                        preds_dict[camera_id][image_id]['bbox_powerdrill'] = [box_x, box_y, box_w, box_h]
                 elif object_id == 2:
-                    pred_dict[camera_id][image_id]['pred_screwdriver'] = 1
-                    if (pred_dict[camera_id][image_id]['pred_screwdriver_conf'] < confidence):
-                        pred_dict[camera_id][image_id]['pred_screwdriver_conf'] = confidence
-                        preds_dict[camera_id][image_id]['bbox_screwdriver'] = (box_x, box_y, box_w, box_h)
+                    preds_dict[camera_id][image_id]['pred_screwdriver'] = 1
+                    if (preds_dict[camera_id][image_id]['pred_screwdriver_conf'] < confidence):
+                        preds_dict[camera_id][image_id]['pred_screwdriver_conf'] = confidence
+                        # TODO: 'unnormalize' bbox pred cords
+
+                        preds_dict[camera_id][image_id]['bbox_screwdriver'] = [box_x, box_y, box_w, box_h]
                 else:
                     raise ValueError("This pred is neither a powerdrill nor a screwdriver!")
         
+        len_test_annotations_dict = len(test_annotations_dict)
         for i,camera in enumerate(test_annotations_dict):
             len_camera_dict = len(test_annotations_dict[camera])
             for j, image in enumerate(test_annotations_dict[camera]):
@@ -135,11 +167,70 @@ def eval_yolo(args):
                       f"| Filename: {gt_dict['img']['file_name']} ", 
                       flush=True)
                 
+                # used to store all results for later processing, im using dicts cause appending to df every iteration is too expensive
+                if curr_id not in eval_dict:
+                    eval_dict[curr_id] = {}
+                    # if at this point there is no dictionary yet, that means there is no prediction for it
+                    eval_dict[curr_id]['pred_powerdrill'] = 0
+                    eval_dict[curr_id]['pred_screwdriver'] = 0
+
+                eval_dict[curr_id]['image_file'] = gt_dict['img']['file_name']
+
                 if gt_dict['gt_exists'] == 0:
                     eval_dict[curr_id]['gt_powerdrill'] = 0
                     eval_dict[curr_id]['gt_screwdriver'] = 0
                     continue
-        
+                
+                for gt_mask_dict in gt_dict['masks']:
+                    if (gt_mask_dict['category_id'] == 1):
+                        eval_dict[curr_id]['gt_powerdrill'] = 1
+                        tool = 'powerdrill'
+                        if preds_dict[camera][image]['pred_powerdrill'] == 0:
+                            continue
+                        else:
+                            eval_dict[curr_id]['pred_powerdrill'] = 1
+                            pred_bbox = preds_dict[camera][image]['bbox_powerdrill']
+                            pred_conf = preds_dict[camera][image]['pred_powerdrill_conf']
+                    elif (gt_mask_dict['category_id'] == 2):
+                        eval_dict[curr_id]['gt_screwdriver'] = 1
+                        tool = 'screwdriver'
+                        if preds_dict[camera][image]['pred_screwdriver'] == 0:
+                            continue
+                        else:
+                            eval_dict[curr_id]['pred_screwdriver'] = 1
+                            pred_bbox = preds_dict[camera][image]['bbox_screwdriver']
+                            pred_conf = preds_dict[camera][image]['pred_screwdriver_conf']
+                    else:
+                        raise ValueError("This error should never occur i think")
+
+                    gt_bbox = gt_mask_dict['bbox']
+                    gt_img_id = gt_mask_dict['image_id']
+                    gt_cat_id = gt_mask_dict['category_id']
+
+                    # load image
+                    img_path = images_dir_path + '/' + gt_dict['img']['file_name']
+                    image = cv2.imread(img_path)
+                    h,w,_ = image.shape
+                    
+                    #draw bounding boxes to image
+                    pr_x = int(pred_bbox[0])
+                    pr_y = int(pred_bbox[1])
+                    pr_w = int(pred_bbox[2])
+                    pr_h = int(pred_bbox[3])
+                    gt_x = int(gt_bbox[0])
+                    gt_y = int(gt_bbox[1])
+                    gt_w = int(gt_bbox[2])
+                    gt_h = int(gt_bbox[3])
+                    bbox_image = np.zeros_like(image)
+                    cv2.rectangle(bbox_image, (pr_x, pr_y), (pr_x + pr_w, pr_y + pr_h), (0,0,255),2)
+                    cv2.rectangle(bbox_image, (gt_x, gt_y), (gt_x + gt_w, gt_y + gt_h), (0,255,0),2)
+                    result = cv2.addWeighted(image, 1, bbox_image, 1, 0)
+                    cv2.imwrite(output_images_path + '/' + str(gt_dict['img']['id']) + '_' 
+                                 + str(gt_mask_dict['category_id']) + '.jpg', result)
+
+                    exit()
+                    #calculate iou, duhhhh...
+                    bbox_iou = calc_iou_bbox(pred_bbox, gt_bbox)
     return
 
 def eval_yolact(args):
