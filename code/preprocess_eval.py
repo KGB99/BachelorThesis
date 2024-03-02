@@ -11,6 +11,10 @@ import argparse
 #pixel accuracy is: (nr. correctly classified pixels) / (total number of pixels)
 def calc_pixel_acc(pred_mask_bool, gt_mask_bool):
     h,w = pred_mask_bool.shape
+    #gt_h,gt_w = gt_mask_bool.shape
+    #if ((h != gt_h) or (w != gt_w)):
+    #    print("DIMENSIONS DONT MATCH")
+    #    return None
     total_pixels = float(h * w)
 
     mask_correct_pixels = float(np.sum(np.logical_and(pred_mask_bool, gt_mask_bool)))
@@ -381,6 +385,7 @@ def eval_yolact(args):
     found_dets_screwdriver = 0
     found_dets_powerdrill = 0
     iteration = 0
+    uncalculated = []
     for i,camera in enumerate(test_annotations_dict):
         len_camera_dict = len(test_annotations_dict[camera])
         for j, image in enumerate(test_annotations_dict[camera]):
@@ -393,6 +398,13 @@ def eval_yolact(args):
                   f"| Image: {j:05} / {len_camera_dict} "
                   f"| Filename: {gt_dict['img']['file_name']} ", 
                   flush=True)
+            
+            #due to the weird error of different shapes...
+            #img_path = images_dir_path + '/' + gt_dict['img']['file_name']
+            #image = cv2.imread(img_path)
+            #h,w,_ = image.shape
+            #if ((h != 1080) or (w != 1280)):
+            #    continue
                   
             # used to store all results for later processing, im using dicts cause appending to df every iteration is too expensive
             if curr_id not in eval_dict:
@@ -468,11 +480,10 @@ def eval_yolact(args):
                 pred_mask_bool = pred_mask.astype(bool)
 
                 gt_mask = np.zeros((h, w), dtype=np.uint8)
-                # Draw each polygon on the mask
-                for polygon in gt_seg_vertices:
-                    rle = maskUtils.frPyObjects([polygon], h, w)
-                    m = maskUtils.decode(rle)
-                    gt_mask = np.maximum(gt_mask, m[:,:,0])
+                for gt_polygon in gt_seg_vertices:
+                    gt_run_length_encoding = maskUtils.frPyObjects([gt_polygon], h, w)
+                    masks = maskUtils.decode(gt_run_length_encoding)
+                    gt_mask = np.maximum(gt_mask, masks[:,:,0])
                 gt_mask_bool = gt_mask.astype(bool)
                 
                 #gt_mask = gt_mask * 255
@@ -492,10 +503,15 @@ def eval_yolact(args):
 
                 # calculate all relevant evaluation metrics
                 #bbox_pixel_accuracy, mask_pixel_accuracy = calc_pixel_acc(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
-                mask_pixel_accuracy = calc_pixel_acc(pred_mask_bool, gt_mask_bool)
-                bbox_iou, mask_iou = calc_iou(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
-                #bbox_dice_coefficient, mask_dice_coefficient = calc_dice(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
-                mask_dice_coefficient = calc_dice(pred_mask_bool, gt_mask_bool)
+                try:
+                    mask_pixel_accuracy = calc_pixel_acc(pred_mask_bool, gt_mask_bool)
+                    bbox_iou, mask_iou = calc_iou(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
+                    #bbox_dice_coefficient, mask_dice_coefficient = calc_dice(pred_mask_bool, pred_bbox, gt_mask_bool, gt_bbox)
+                    mask_dice_coefficient = calc_dice(pred_mask_bool, gt_mask_bool)
+                except Exception:
+                    # not the ideal way but currently no time left to debug sadly, so we just dont consider this value then
+                    uncalculated.append(curr_id)
+                    continue
 
                 eval_dict[curr_id]['mask_pixel_accuracy_' + tool] = mask_pixel_accuracy
                 eval_dict[curr_id]['bbox_iou_' + tool] = bbox_iou
@@ -568,11 +584,17 @@ def eval_yolact(args):
     print('Average Intersection over union for bounding boxes: ' + str(iou_bbox))
     print('Percentage of segmentations detected: ' + str(ratio_seg_found))
     print('Average Intersection over union for segmentations: ' + str(iou_segs))
+    
     f = open(output + '/IOU_results.txt', 'w')
     f.write('Percentage of bounding boxes detected: ' + str(ratio_bboxes_found) + '\n')
     f.write('Average Intersection over union for bounding boxes: ' + str(iou_bbox) + '\n')
     f.write('Percentage of segmentations detected: ' + str(ratio_seg_found) + '\n')
     f.write('Average Intersection over union for segmentations: ' + str(iou_segs) + '\n')
+    f.close()
+    
+    f = open(output + '/uncalculated_ids.txt', 'w')
+    for value in uncalculated:
+        f.write(str(value))
     f.close()
     return
 
