@@ -218,6 +218,7 @@ def eval_yolo(args):
                         continue
                     
                     eval_dict[curr_id]['pred_powerdrill'] = 1
+                    eval_dict[curr_id]['pred_powerdrill_conf'] = pred_conf
                         
                 elif (gt_mask_dict['category_id'] == 2):
                     eval_dict[curr_id]['gt_screwdriver'] = 1
@@ -232,6 +233,7 @@ def eval_yolo(args):
                         continue
                     
                     eval_dict[curr_id]['pred_screwdriver'] = 1
+                    eval_dict[curr_id]['pred_screwdriver_conf'] = pred_conf
                     
                 else:
                     raise ValueError("This error should never occur i think")
