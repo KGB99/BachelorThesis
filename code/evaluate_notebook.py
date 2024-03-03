@@ -44,22 +44,34 @@ def eval_yolact(path_to_eval_values):
         eval_dict[conf_threshold]['powerdrill']['TP'] = len(powerdrill_TP_df)
         eval_dict[conf_threshold]['powerdrill']['FP'] = len(powerdrill_FP_df)
         eval_dict[conf_threshold]['powerdrill']['FN'] = len(powerdrill_FN_df)
-        TP = len(powerdrill_TP_df)
-        FP = len(powerdrill_FP_df)
-        FN = len(powerdrill_FN_df)
-        eval_dict[conf_threshold]['powerdrill']['precision'] = 0 if (TP + FP == 0) else len(powerdrill_TP_df) / (len(powerdrill_TP_df) + len(powerdrill_FP_df))
-        eval_dict[conf_threshold]['powerdrill']['recall'] = 0 if (TP + FN == 0) else len(powerdrill_TP_df) / (len(powerdrill_TP_df) + len(powerdrill_FN_df))
+        PWD_TP = len(powerdrill_TP_df)
+        PWD_FP = len(powerdrill_FP_df)
+        PWD_FN = len(powerdrill_FN_df)
+        power_undefined = True
+        if ((PWD_TP + PWD_FP != 0) & (PWD_TP + PWD_FN != 0)):
+            power_undefined = False
+            eval_dict[conf_threshold]['powerdrill']['precision'] = len(powerdrill_TP_df) / (len(powerdrill_TP_df) + len(powerdrill_FP_df))
+        #if (TP + FN != 0):
+            eval_dict[conf_threshold]['powerdrill']['recall'] = len(powerdrill_TP_df) / (len(powerdrill_TP_df) + len(powerdrill_FN_df))
 
         eval_dict[conf_threshold]['screwdriver'] = {}
         eval_dict[conf_threshold]['screwdriver']['TP'] = len(screwdriver_TP_df)
         eval_dict[conf_threshold]['screwdriver']['FP'] = len(screwdriver_FP_df)
         eval_dict[conf_threshold]['screwdriver']['FN'] = len(screwdriver_FN_df)
-        TP = len(screwdriver_TP_df)
-        FP = len(screwdriver_FP_df)
-        FN = len(screwdriver_FN_df)
-        eval_dict[conf_threshold]['screwdriver']['precision'] = 0 if (TP + FP == 0) else len(screwdriver_TP_df) / (len(screwdriver_TP_df) + len(screwdriver_FP_df))
-        eval_dict[conf_threshold]['screwdriver']['recall'] = 0 if (TP + FN == 0) else len(screwdriver_TP_df) / (len(screwdriver_TP_df) + len(screwdriver_FN_df))
+        SCR_TP = len(screwdriver_TP_df)
+        SCR_FP = len(screwdriver_FP_df)
+        SCR_FN = len(screwdriver_FN_df)
+        screw_undefined = True
+        if ((SCR_TP + SCR_FP != 0) & (SCR_TP + SCR_FN != 0)):
+            screw_undefined = False
+            eval_dict[conf_threshold]['screwdriver']['precision'] = len(screwdriver_TP_df) / (len(screwdriver_TP_df) + len(screwdriver_FP_df))
+        #if (TP + FN != 0):
+            eval_dict[conf_threshold]['screwdriver']['recall'] = len(screwdriver_TP_df) / (len(screwdriver_TP_df) + len(screwdriver_FN_df))
         
+        if (power_undefined or screw_undefined):
+            output += (f"Threshold: {conf_threshold:.2f} | Recall: Undefined | Precision: Undefined "
+            f"| TP: {len(powerdrill_TP_df) + len(screwdriver_TP_df):4} | FN: {len(powerdrill_FN_df) + len(screwdriver_FN_df):4} | FP: {len(powerdrill_FP_df) + len(screwdriver_FP_df):4} \n")
+            continue
         eval_dict[conf_threshold]['total'] = {}
         eval_dict[conf_threshold]['total']['precision'] = (eval_dict[conf_threshold]['screwdriver']['precision'] + eval_dict[conf_threshold]['powerdrill']['precision']) / 2
         eval_dict[conf_threshold]['total']['recall'] = (eval_dict[conf_threshold]['screwdriver']['recall'] + eval_dict[conf_threshold]['powerdrill']['recall']) / 2
@@ -75,12 +87,15 @@ def eval_yolact(path_to_eval_values):
     screw_recall_list = []
     screw_precision_list = []
     for conf_threshold in eval_dict:
-        total_recall_list.append(eval_dict[conf_threshold]['total']['recall'])
-        total_precision_list.append(eval_dict[conf_threshold]['total']['precision'])
-        pow_recall_list.append(eval_dict[conf_threshold]['powerdrill']['recall'])
-        pow_precision_list.append(eval_dict[conf_threshold]['powerdrill']['precision'])
-        screw_recall_list.append(eval_dict[conf_threshold]['screwdriver']['recall'])
-        screw_precision_list.append(eval_dict[conf_threshold]['screwdriver']['precision'])
+        if 'total' in eval_dict[conf_threshold]:
+            total_recall_list.append(eval_dict[conf_threshold]['total']['recall'])
+            total_precision_list.append(eval_dict[conf_threshold]['total']['precision'])
+        if (('recall' in eval_dict[conf_threshold]['powerdrill']) and ('precision' in eval_dict[conf_threshold]['powerdrill'])):
+            pow_recall_list.append(eval_dict[conf_threshold]['powerdrill']['recall'])
+            pow_precision_list.append(eval_dict[conf_threshold]['powerdrill']['precision'])
+        if (('recall' in eval_dict[conf_threshold]['screwdriver']) and ('precision' in eval_dict[conf_threshold]['screwdriver'])):
+            screw_recall_list.append(eval_dict[conf_threshold]['screwdriver']['recall'])
+            screw_precision_list.append(eval_dict[conf_threshold]['screwdriver']['precision'])
 
 
 
@@ -211,9 +226,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--yolo", required=False ,default=False, type=bool)
     parser.add_argument("--yolact", required=False,default=False, type=bool)
+    parser.add_argument("--cluster", required=False, default=False, type=bool)
     args = parser.parse_args()
     if args.yolo:
-        parent_path = '/Users/kerim/dev/BachelorThesis/results_eval/YOLO'
+        if args.cluster:
+            parent_path = ''
+        else:
+            parent_path = '/Users/kerim/dev/BachelorThesis/results_eval/YOLO'
         yolo_folders = os.listdir(parent_path)
         for folder in yolo_folders:
             eval_file_path = parent_path + '/' + folder + '/eval_values.csv'
@@ -222,7 +241,10 @@ if __name__ == '__main__':
                 f.write(output)
             print(output)
     if args.yolact:
-        parent_path = '/Users/kerim/dev/BachelorThesis/results_eval/YOLACT'
+        if args.cluster:
+            parent_path = ''
+        else:
+            parent_path = '/Users/kerim/dev/BachelorThesis/results_eval/YOLACT'
         yolact_folders = os.listdir(parent_path)
         for folder in yolact_folders:
             eval_file_path = parent_path + '/' + folder + '/eval_values.csv'
