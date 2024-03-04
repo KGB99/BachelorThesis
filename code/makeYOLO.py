@@ -12,6 +12,7 @@ if __name__ == '__main__':
     parser.add_argument("--create_test", required=False, type=bool, default=False)
     parser.add_argument("--info_path", required=True, type=str)
     parser.add_argument("--output", required=False, default="output", type=str)
+    parser.add_argument("--val_folders", help="If instead of a ratio you wish to allocate certain folders to validation, then write them here", required=False, type=str, default=[])
     args = parser.parse_args()
     train_dir = args.train_dir
     labels_dir = args.labels_dir
@@ -20,6 +21,8 @@ if __name__ == '__main__':
     create_test = args.create_test
     info_path = args.info_path
     output_file = args.output
+    val_folders = args.val_folders
+    use_val_folders = (len(val_folders) != 0)
 
     train_split = 0.7
     
@@ -35,7 +38,7 @@ if __name__ == '__main__':
         camera_dict = coco_dict[camera]
         split_counter = 1
         for j,image in enumerate(camera_dict):
-            print("Camera: " + str(i) + "/" + str(len(coco_dict)) + " | Image: " + str(j) + "/" + str(len(camera_dict)))
+            print(f"Camera: {i:2d} / {len(coco_dict)} | Image: {j:4d} / {len(camera_dict)}")
             camera_len = len(camera_dict.keys())
             train_limit = int(train_split * camera_len)
             img_dict = camera_dict[image]['img']
@@ -74,8 +77,8 @@ if __name__ == '__main__':
                 temp_img_path = temp_path_split[0]
             temp_array.reverse()
             temp_path = labels_dir
-            for i in range(len(temp_array) - 1):
-                temp_path = temp_path + "/" + temp_array[i]
+            for k in range(len(temp_array) - 1):
+                temp_path = temp_path + "/" + temp_array[k]
                 if (not os.path.exists(temp_path)):
                     os.mkdir(temp_path)
 
@@ -86,15 +89,26 @@ if __name__ == '__main__':
             f.close()
 
             if not create_test:
-                if (split_counter < train_limit):
-                    f = open(info_path + "/" + output_file + "_train.txt", "a")
-                    f.write(img_path + "\n")
-                    f.close()
-                    split_counter += 1
+                if not use_val_folders:
+                    if (split_counter < train_limit):
+                        f = open(info_path + "/" + output_file + "_train.txt", "a")
+                        f.write(img_path + "\n")
+                        f.close()
+                        split_counter += 1
+                    else:
+                        f = open(info_path + "/" + output_file + "_val.txt", "a")
+                        f.write(img_path + "\n")
+                        f.close()
                 else:
-                    f = open(info_path + "/" + output_file + "_val.txt", "a")
-                    f.write(img_path + "\n")
-                    f.close()
+                    if camera in val_folders:
+                        print(f"Adding {camera} to val!")
+                        f = open(info_path + "/" + output_file + "_val.txt", "a")
+                        f.write(img_path + "\n")
+                        f.close()
+                    else:
+                        f = open(info_path + "/" + output_file + "_train.txt", "a")
+                        f.write(img_path + "\n")
+                        f.close()
             else:
                 f = open(info_path + "/" + output_file + "_test.txt", "a")
                 f.write(img_path + "\n")
