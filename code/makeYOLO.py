@@ -23,6 +23,7 @@ if __name__ == '__main__':
     output_file = args.output
     val_folders = args.val_folders
     use_val_folders = (len(val_folders) != 0)
+    
 
     train_split = 0.7
     
@@ -32,7 +33,6 @@ if __name__ == '__main__':
     f = open(coco_file, 'r')
     coco_dict = json.load(f)
     f.close()
-
     for i,camera in enumerate(coco_dict):
         print("Camera: " + str(i) + "/" + str(len(coco_dict)))
         camera_dict = coco_dict[camera]
@@ -89,7 +89,7 @@ if __name__ == '__main__':
             f.close()
 
             if not create_test:
-                if not use_val_folders:
+                if (not use_val_folders):
                     if (split_counter < train_limit):
                         f = open(info_path + "/" + output_file + "_train.txt", "a")
                         f.write(img_path + "\n")
