@@ -17,8 +17,7 @@ def calc_pixel_acc(pred_mask_bool, gt_mask_bool):
     #    return None
     total_pixels = float(h * w)
 
-    mask_correct_pixels = float(np.sum(np.logical_and(pred_mask_bool, gt_mask_bool)))
-
+    mask_correct_pixels = float(np.sum(np.logical_and(pred_mask_bool, gt_mask_bool))) + float(np.sum(np.logical_and(np.logical_not(pred_mask_bool), np.logical_not(gt_mask_bool))))
     #bbox_correct_pixells = # maybe make bool masks before, could help with iou calc too
 
     # only calc if (total_pixels > 0) otherwise mask_pixel_acc should be 0

@@ -174,6 +174,7 @@ def create_labels_from_old_annotations(args):
     info_dict = json.load(f)
     f.close()
     
+    
     #iterate through bitmasks, calculate annotation and add to dictionary
     if not use_val_folders:
         train_to_val_ratio_dict = {}
